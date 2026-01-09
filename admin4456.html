@@ -15,7 +15,7 @@
         .btn-gold:hover { background: #b8962d; transform: translateY(-2px); }
         .edit-mode { border: 2px solid #d4af37 !important; }
         input[type=range] { accent-color: #d4af37; }
-        #preview-container { height: 300px; background: radial-gradient(circle, #222 0%, #000 100%); border-radius: 8px; overflow: hidden; position: relative; }
+        #preview-container { height: 350px; background: radial-gradient(circle, #333 0%, #000 100%); border-radius: 8px; overflow: hidden; position: relative; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -35,16 +35,16 @@
                 
                 <!-- Live 3D Preview Window -->
                 <div id="preview-container" class="mb-4 border border-gray-700">
-                    <a-scene embedded style="height: 300px; width: 100%;" vr-mode-ui="enabled: false">
+                    <a-scene embedded style="height: 350px; width: 100%;" vr-mode-ui="enabled: false">
                         <a-light type="ambient" intensity="1.5"></a-light>
                         <a-light type="directional" position="1 2 1" intensity="1"></a-light>
                         <!-- Updated default position to accommodate huge scales -->
-                        <a-entity id="preview-model" gltf-model="" position="0 -0.5 -3" rotation="90 0 0" scale="0.15 0.15 0.15"></a-entity>
+                        <a-entity id="preview-model" gltf-model="" position="0 0 -5" rotation="90 0 0" scale="0.15 0.15 0.15"></a-entity>
                         <a-sky color="#111"></a-sky>
-                        <!-- Camera moved further back (Z=2) to see huge models -->
-                        <a-camera id="preview-camera" position="0 0 2" look-controls="enabled: false"></a-camera>
+                        <!-- Camera position will be updated dynamically via JS -->
+                        <a-camera id="preview-camera" position="0 0 5" look-controls="enabled: false"></a-camera>
                     </a-scene>
-                    <div class="absolute bottom-2 right-2 text-[8px] bg-black/50 p-1 rounded text-gray-400 font-bold uppercase">Mega Preview Active</div>
+                    <div class="absolute bottom-2 right-2 text-[10px] bg-[#d4af37] text-black px-2 py-0.5 rounded font-bold uppercase">ULTRA SCALE PREVIEW</div>
                 </div>
 
                 <form id="add-item-form" class="space-y-4">
@@ -76,13 +76,13 @@
                         <p class="text-[10px] text-[#d4af37] font-bold uppercase">3D Adjustments (Live)</p>
                         <div>
                             <div class="flex justify-between">
-                                <label class="text-[9px] text-gray-500 uppercase">Scale: <span id="scale-val" class="text-white font-bold">0.15</span></label>
+                                <label class="text-[9px] text-gray-500 uppercase">Scale: <span id="scale-val" class="text-white font-bold text-sm">0.15</span></label>
                             </div>
-                            <!-- Max scale set to 10.0 for extreme zooming -->
-                            <input type="range" id="scale" min="0.01" max="10.0" step="0.01" value="0.15" class="w-full h-2 rounded-lg cursor-pointer">
+                            <!-- Now supports massive scales up to 50.0 to fix the small model issue -->
+                            <input type="range" id="scale" min="0.01" max="50.0" step="0.05" value="0.15" class="w-full h-2 rounded-lg cursor-pointer">
                         </div>
                         <div>
-                            <label class="text-[9px] text-gray-500 uppercase">Rotation (X Axis): <span id="rot-val" class="text-white font-bold">90</span>°</label>
+                            <label class="text-[9px] text-gray-500 uppercase">Rotation (X Axis): <span id="rot-val" class="text-white font-bold text-sm">90</span>°</label>
                             <input type="range" id="rotX" min="0" max="360" step="1" value="90" class="w-full h-2 rounded-lg cursor-pointer">
                         </div>
                     </div>
@@ -149,15 +149,13 @@
             previewModel.setAttribute('scale', `${s} ${s} ${s}`);
             previewModel.setAttribute('rotation', `${rX} 0 0`);
 
-            // DYNAMIC CAMERA: Adjust camera Z based on scale so it doesn't clip or disappear
-            // If scale is very large, move camera further back automatically
-            let cameraZ = 1.5 + (s * 0.5); 
+            // THE FIX: Adjust camera Z based on scale so the model doesn't disappear
+            // We increase camera distance as the scale grows
+            let cameraZ = 2 + (s * 1.5); 
             previewCamera.setAttribute('position', `0 0 ${cameraZ}`);
             
-            // Adjust model Y to keep it centered when growing
-            let modelY = -0.2 * s;
-            if(modelY < -1.5) modelY = -1.5; // cap it
-            previewModel.setAttribute('position', `0 ${modelY} -${s * 0.8}`);
+            // Push the model further back (Z) as it gets bigger to avoid clipping through the camera
+            previewModel.setAttribute('position', `0 0 -${s * 0.5}`);
         }
 
         // Live labels & Preview update
@@ -247,7 +245,7 @@
             document.getElementById('scale-val').innerText = "0.15";
             document.getElementById('rot-val').innerText = "90";
             previewModel.setAttribute('gltf-model', '');
-            previewCamera.setAttribute('position', '0 0 1.5');
+            previewCamera.setAttribute('position', '0 0 5');
         }
 
         document.getElementById('cancel-btn').onclick = () => resetForm();
