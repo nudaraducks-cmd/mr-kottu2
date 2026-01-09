@@ -8,9 +8,10 @@
     <!-- Libraries -->
     <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
 
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: #000; }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: #000; touch-action: none; }
         
         #ui-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -18,18 +19,13 @@
         }
 
         #status-bar {
-            background: rgba(0,0,0,0.7); color: #d4af37; padding: 15px; text-align: center; font-size: 14px;
+            background: rgba(0,0,0,0.85); color: #d4af37; padding: 20px; text-align: center; 
+            font-size: 14px; letter-spacing: 1px; border-bottom: 1px solid rgba(212,175,55,0.3);
         }
 
-        #menu-controls {
-            display: flex; justify-content: center; gap: 20px; padding-bottom: 40px; pointer-events: auto;
-            visibility: hidden; /* Only show when target is found */
-        }
-        
-        .nav-btn {
-            background: #d4af37; border: none; padding: 15px 25px; border-radius: 30px;
-            color: #000; font-weight: bold; cursor: pointer; font-size: 16px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        #instruction-overlay {
+            position: absolute; bottom: 100px; width: 100%; text-align: center;
+            color: white; font-size: 14px; opacity: 0.7; visibility: hidden;
         }
 
         #loader {
@@ -39,33 +35,39 @@
         }
         
         .spinner {
-            width: 40px; height: 40px; border: 4px solid rgba(212,175,55,0.2);
-            border-top: 4px solid #d4af37; border-radius: 50%; animation: spin 1s linear infinite;
-            margin-bottom: 15px;
+            width: 50px; height: 50px; border: 3px solid rgba(212,175,55,0.1);
+            border-top: 3px solid #d4af37; border-radius: 50%; animation: spin 1s linear infinite;
+            margin-bottom: 20px;
         }
         @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .swipe-hint {
+            width: 50px; height: 5px; background: rgba(255,255,255,0.3);
+            margin: 10px auto; border-radius: 5px; position: relative; overflow: hidden;
+        }
+        .swipe-hint::after {
+            content: ''; position: absolute; width: 20px; height: 100%; background: #d4af37;
+            animation: moveHint 2s infinite ease-in-out;
+        }
+        @keyframes moveHint { 0% { left: -20px; } 100% { left: 50px; } }
     </style>
 </head>
 <body>
 
     <div id="loader">
         <div class="spinner"></div>
-        <p>L'ARISTO පද්ධතිය සූදානම් වේ...</p>
+        <p style="letter-spacing: 2px;">L'ARISTO PREPARING...</p>
     </div>
 
     <div id="ui-overlay">
-        <div id="status-bar">මෙනු පත (QR) ස්කෑන් කරන්න</div>
+        <div id="status-bar">L'ARISTO IMMERSIVE MENU</div>
         
-        <div id="menu-controls">
-            <button class="nav-btn" onclick="prevItem()">මීට කලින්</button>
-            <button class="nav-btn" onclick="nextItem()">ඊළඟ එක</button>
+        <div id="instruction-overlay">
+            <div class="swipe-hint"></div>
+            මාරු කිරීම සඳහා වමට හෝ දකුණට ස්වයිප් කරන්න
         </div>
     </div>
 
-    <!-- 
-        වැදගත්: imageTargetSrc එක නිවැරදිව ./targets.mind ලෙස තිබිය යුතුයි. 
-        ඔබේ ගොනුව තිබෙන තැන අනුව මෙය වෙනස් කරන්න.
-    -->
     <a-scene 
         mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiScanning: yes;" 
         color-space="sRGB" 
@@ -74,7 +76,6 @@
         device-orientation-permission-ui="enabled: false">
         
         <a-assets>
-            <!-- Models -->
             <a-asset-item id="risotto-m" src="risotto.glb"></a-asset-item>
             <a-asset-item id="scallops-m" src="scallops.glb"></a-asset-item>
             <a-asset-item id="lamb-m" src="lamb.glb"></a-asset-item>
@@ -83,31 +84,45 @@
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
         <a-light type="ambient" intensity="1"></a-light>
-        <a-light type="point" position="0 2 1" intensity="1.2"></a-light>
+        <a-light type="point" position="0 3 2" intensity="1.5"></a-light>
 
-        <!-- Target Placement -->
         <a-entity mindar-image-target="targetIndex: 0" id="target-anchor">
             
             <a-entity rotation="90 0 0">
-                <!-- Wrapper to switch items -->
-                <a-entity id="item-carousel">
+                <!-- Group that will animate on swipe -->
+                <a-entity id="menu-slider" animation="property: position; dur: 600; easing: easeOutQuad">
                     
                     <!-- Item 0 -->
-                    <a-entity id="item-0" visible="true">
-                        <a-box position="0 0.2 0" scale="0.3 0.3 0.3" color="#d4af37" animation="property: rotation; to: 0 360 0; loop: true; dur: 6000"></a-box>
-                        <a-text value="RISOTTO\nRs. 2,450" align="center" position="0 0.6 0" width="3" color="#d4af37"></a-text>
+                    <a-entity id="item-0" position="0 0 0">
+                        <a-box position="0 0.2 0" scale="0.3 0.3 0.3" color="#d4af37" 
+                               animation="property: rotation; to: 0 360 0; loop: true; dur: 8000; easing: linear">
+                        </a-box>
+                        <a-entity position="0 0.6 0">
+                            <a-text value="WILD MUSHROOM RISOTTO" align="center" width="2.5" color="#d4af37" font="aileron" bold="true"></a-text>
+                            <a-text value="Rs. 2,450" align="center" width="1.8" color="#fff" position="0 -0.2 0"></a-text>
+                        </a-entity>
                     </a-entity>
 
-                    <!-- Item 1 -->
-                    <a-entity id="item-1" visible="false">
-                        <a-box position="0 0.2 0" scale="0.3 0.3 0.3" color="#ff4444" animation="property: rotation; to: 0 360 0; loop: true; dur: 6000"></a-box>
-                        <a-text value="SCALLOPS\nRs. 3,100" align="center" position="0 0.6 0" width="3" color="#ff4444"></a-text>
+                    <!-- Item 1 - Positioned to the right -->
+                    <a-entity id="item-1" position="2 0 0">
+                        <a-box position="0 0.2 0" scale="0.3 0.3 0.3" color="#ff4444" 
+                               animation="property: rotation; to: 0 360 0; loop: true; dur: 8000; easing: linear">
+                        </a-box>
+                        <a-entity position="0 0.6 0">
+                            <a-text value="PAN-SEARED SCALLOPS" align="center" width="2.5" color="#ff4444" font="aileron"></a-text>
+                            <a-text value="Rs. 3,100" align="center" width="1.8" color="#fff" position="0 -0.2 0"></a-text>
+                        </a-entity>
                     </a-entity>
 
-                    <!-- Item 2 -->
-                    <a-entity id="item-2" visible="false">
-                        <a-box position="0 0.2 0" scale="0.3 0.3 0.3" color="#44ff44" animation="property: rotation; to: 0 360 0; loop: true; dur: 6000"></a-box>
-                        <a-text value="LAMB CHOP\nRs. 4,800" align="center" position="0 0.6 0" width="3" color="#44ff44"></a-text>
+                    <!-- Item 2 - Positioned further right -->
+                    <a-entity id="item-2" position="4 0 0">
+                        <a-box position="0 0.2 0" scale="0.3 0.3 0.3" color="#44ff44" 
+                               animation="property: rotation; to: 0 360 0; loop: true; dur: 8000; easing: linear">
+                        </a-box>
+                        <a-entity position="0 0.6 0">
+                            <a-text value="HERB CRUSTED LAMB" align="center" width="2.5" color="#44ff44" font="aileron"></a-text>
+                            <a-text value="Rs. 4,800" align="center" width="1.8" color="#fff" position="0 -0.2 0"></a-text>
+                        </a-entity>
                     </a-entity>
 
                 </a-entity>
@@ -120,43 +135,58 @@
     <script>
         let currentItem = 0;
         const totalItems = 3;
+        const itemSpacing = 2; // Distance between items in A-Frame units
+        
+        let touchStartX = 0;
+        let touchEndX = 0;
 
-        function updateDisplay() {
-            for(let i=0; i<totalItems; i++) {
-                document.getElementById(`item-${i}`).setAttribute('visible', i === currentItem);
+        const slider = document.getElementById('menu-slider');
+        const instruction = document.getElementById('instruction-overlay');
+
+        function updateSlider() {
+            const targetX = -currentItem * itemSpacing;
+            slider.setAttribute('animation', `property: position; to: ${targetX} 0 0; dur: 600; easing: easeOutExpo`);
+        }
+
+        // Touch handling logic
+        window.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        });
+
+        window.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        });
+
+        function handleSwipe() {
+            const swipeThreshold = 50;
+            if (touchStartX - touchEndX > swipeThreshold) {
+                // Swiped Left -> Next Item
+                if (currentItem < totalItems - 1) {
+                    currentItem++;
+                    updateSlider();
+                }
+            } else if (touchEndX - touchStartX > swipeThreshold) {
+                // Swiped Right -> Prev Item
+                if (currentItem > 0) {
+                    currentItem--;
+                    updateSlider();
+                }
             }
-        }
-
-        function nextItem() {
-            currentItem = (currentItem + 1) % totalItems;
-            updateDisplay();
-        }
-
-        function prevItem() {
-            currentItem = (currentItem - 1 + totalItems) % totalItems;
-            updateDisplay();
         }
 
         window.addEventListener('load', () => {
             const loader = document.getElementById('loader');
             const target = document.getElementById('target-anchor');
-            const controls = document.getElementById('menu-controls');
-            const status = document.getElementById('status-bar');
 
-            // Hide loader
-            setTimeout(() => { loader.style.display = 'none'; }, 2000);
+            setTimeout(() => { loader.style.opacity = '0'; setTimeout(() => loader.style.display = 'none', 500); }, 2000);
 
-            // Handle Target Events
             target.addEventListener('targetFound', () => {
-                controls.style.visibility = 'visible';
-                status.innerText = "ආහාර මෙනුව සක්‍රීයයි";
-                status.style.color = "#44ff44";
+                instruction.style.visibility = 'visible';
             });
 
             target.addEventListener('targetLost', () => {
-                controls.style.visibility = 'hidden';
-                status.innerText = "මෙනු පත (QR) සොයමින් පවතී...";
-                status.style.color = "#d4af37";
+                instruction.style.visibility = 'hidden';
             });
         });
     </script>
