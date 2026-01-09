@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MR KOTTU | Admin Panel (Mega Scale Fix)</title>
+    <title>MR KOTTU | Admin Panel (Scale Adjusted)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- A-Frame for Preview -->
     <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
@@ -38,13 +38,11 @@
                     <a-scene embedded style="height: 350px; width: 100%;" vr-mode-ui="enabled: false">
                         <a-light type="ambient" intensity="1.5"></a-light>
                         <a-light type="directional" position="1 2 1" intensity="1"></a-light>
-                        <!-- Updated default position to accommodate huge scales -->
                         <a-entity id="preview-model" gltf-model="" position="0 0 -5" rotation="90 0 0" scale="0.15 0.15 0.15"></a-entity>
                         <a-sky color="#111"></a-sky>
-                        <!-- Camera position will be updated dynamically via JS -->
                         <a-camera id="preview-camera" position="0 0 5" look-controls="enabled: false"></a-camera>
                     </a-scene>
-                    <div class="absolute bottom-2 right-2 text-[10px] bg-[#d4af37] text-black px-2 py-0.5 rounded font-bold uppercase">ULTRA SCALE PREVIEW</div>
+                    <div class="absolute bottom-2 right-2 text-[10px] bg-[#d4af37] text-black px-2 py-0.5 rounded font-bold uppercase">PREVIEW ACTIVE</div>
                 </div>
 
                 <form id="add-item-form" class="space-y-4">
@@ -78,8 +76,8 @@
                             <div class="flex justify-between">
                                 <label class="text-[9px] text-gray-500 uppercase">Scale: <span id="scale-val" class="text-white font-bold text-sm">0.15</span></label>
                             </div>
-                            <!-- Now supports massive scales up to 50.0 to fix the small model issue -->
-                            <input type="range" id="scale" min="0.01" max="50.0" step="0.05" value="0.15" class="w-full h-2 rounded-lg cursor-pointer">
+                            <!-- Scale adjusted to max 5.0 as requested -->
+                            <input type="range" id="scale" min="0.01" max="5.0" step="0.05" value="0.15" class="w-full h-2 rounded-lg cursor-pointer">
                         </div>
                         <div>
                             <label class="text-[9px] text-gray-500 uppercase">Rotation (X Axis): <span id="rot-val" class="text-white font-bold text-sm">90</span>°</label>
@@ -145,20 +143,15 @@
                 previewModel.setAttribute('gltf-model', url);
             }
             
-            // Apply scale
             previewModel.setAttribute('scale', `${s} ${s} ${s}`);
             previewModel.setAttribute('rotation', `${rX} 0 0`);
 
-            // THE FIX: Adjust camera Z based on scale so the model doesn't disappear
-            // We increase camera distance as the scale grows
+            // Adjust camera dynamically
             let cameraZ = 2 + (s * 1.5); 
             previewCamera.setAttribute('position', `0 0 ${cameraZ}`);
-            
-            // Push the model further back (Z) as it gets bigger to avoid clipping through the camera
             previewModel.setAttribute('position', `0 0 -${s * 0.5}`);
         }
 
-        // Live labels & Preview update
         document.getElementById('scale').oninput = (e) => {
             document.getElementById('scale-val').innerText = e.target.value;
             updatePreview();
