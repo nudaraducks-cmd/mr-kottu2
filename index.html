@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>L'ARISTO | Virtual Dining Experience</title>
     
-    <!-- Libraries -->
+    <!-- පූරණය සඳහා අවශ්‍ය පුස්තකාල -->
     <script src="https://aframe.io/releases/1.3.0/aframe.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js" crossorigin="anonymous"></script>
@@ -13,6 +13,7 @@
     <style>
         body { margin: 0; overflow: hidden; font-family: sans-serif; }
         
+        /* ලෝඩින් තිරය */
         #loader {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: radial-gradient(circle, #1a1a1a, #000);
@@ -28,6 +29,7 @@
 
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+        /* උපදෙස් පුවරුව */
         #hud {
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
             color: white; text-align: center; pointer-events: none; z-index: 10;
@@ -41,11 +43,11 @@
     <div id="loader">
         <div class="spinner"></div>
         <h1 style="letter-spacing: 5px;">L'ARISTO</h1>
-        <p>Loka siddhavaguttide...</p>
+        <p>ලෝකය සූදානම් වෙමින් පවතී...</p>
     </div>
 
     <div id="hud">
-        <p id="instruction">Scan Maadi: Menu card scan maadi aaharada ruchi nodi</p>
+        <p id="instruction">ස්කෑන් කරන්න: මෙනු පත ස්කෑන් කර ආහාර නරඹන්න</p>
     </div>
 
     <a-scene 
@@ -56,7 +58,7 @@
         device-orientation-permission-ui="enabled: false">
         
         <a-assets id="assets">
-            <!-- Asset items with error handling via JS -->
+            <!-- GLB ගොනු පූරණය කිරීම -->
             <a-asset-item id="risotto-m" src="risotto.glb"></a-asset-item>
             <a-asset-item id="scallops-m" src="scallops.glb"></a-asset-item>
             <a-asset-item id="lamb-m" src="lamb.glb"></a-asset-item>
@@ -70,16 +72,16 @@
         <!-- 1. Wild Mushroom Risotto -->
         <a-entity mindar-image-target="targetIndex: 0" id="target0">
             <a-entity rotation="90 0 0">
-                <!-- Fallback Container: Idu model load aagada iddare kempu box torsutte -->
                 <a-entity id="risotto-container">
-                    <a-gltf-model src="#risotto-m" scale="0.12 0.12 0.12" 
-                        onerror="this.parentElement.innerHTML = '<a-box scale=\'0.3 0.3 0.3\' color=\'orange\' animation=\'property: rotation; to: 0 360 0; loop: true\'></a-box>'">
+                    <!-- GLB එක පූරණය නොවන්නේ නම් තැඹිලි පාට කොටුවක් පෙනෙනු ඇත -->
+                    <a-gltf-model id="model0" src="#risotto-m" scale="0.12 0.12 0.12" 
+                        animation="property: rotation; to: 0 360 0; dur: 20000; easing: linear; loop: true">
                     </a-gltf-model>
                 </a-entity>
                 
                 <a-plane position="0 0.6 0.2" width="0.8" height="0.3" color="#000" opacity="0.8">
                     <a-text value="Wild Mushroom Risotto" align="center" width="2" color="#d4af37" position="0 0.05 0.01"></a-text>
-                    <a-text value="Arborio akki mattu truffle oil" align="center" width="1.2" color="#fff" position="0 -0.05 0.01"></a-text>
+                    <a-text value="Arborio සහල් සහ truffle තෙල්" align="center" width="1.2" color="#fff" position="0 -0.05 0.01"></a-text>
                 </a-plane>
             </a-entity>
         </a-entity>
@@ -88,9 +90,7 @@
         <a-entity mindar-image-target="targetIndex: 1" id="target1">
             <a-entity rotation="90 0 0">
                 <a-entity id="scallops-container">
-                    <a-gltf-model src="#scallops-m" scale="0.1 0.1 0.1" 
-                        onerror="this.parentElement.innerHTML = '<a-sphere scale=\'0.2 0.2 0.2\' color=\'pink\'></a-sphere>'">
-                    </a-gltf-model>
+                    <a-gltf-model id="model1" src="#scallops-m" scale="0.1 0.1 0.1"></a-gltf-model>
                 </a-entity>
                 <a-plane position="0 0.5 0" width="0.7" height="0.2" color="#000" opacity="0.7">
                     <a-text value="Pan-Seared Scallops" align="center" width="1.8" color="#d4af37"></a-text>
@@ -102,9 +102,7 @@
         <a-entity mindar-image-target="targetIndex: 2" id="target2">
             <a-entity rotation="90 0 0">
                 <a-entity id="lamb-container">
-                    <a-gltf-model src="#lamb-m" scale="0.12 0.12 0.12" 
-                        onerror="this.parentElement.innerHTML = '<a-cylinder scale=\'0.2 0.3 0.2\' color=\'red\'></a-cylinder>'">
-                    </a-gltf-model>
+                    <a-gltf-model id="model2" src="#lamb-m" scale="0.12 0.12 0.12"></a-gltf-model>
                 </a-entity>
                 <a-plane position="0 0.5 0" width="0.7" height="0.2" color="#000" opacity="0.7">
                     <a-text value="Rack of Lamb" align="center" width="1.8" color="#d4af37"></a-text>
@@ -115,6 +113,7 @@
     </a-scene>
 
     <script>
+        // ගොනු තිබෙන නිවැරදි ස්ථානය පෙන්වීමට ශ්‍රිතය (Function)
         const fixAssetPaths = () => {
             const baseUrl = window.location.href.split('/').slice(0, -1).join('/') + '/';
             const assets = document.querySelectorAll('a-asset-item');
@@ -126,8 +125,27 @@
             });
         };
 
+        // ආකෘතිය (Model) පූරණය නොවන්නේ නම් Placeholder එකක් එක් කිරීම
+        const checkModels = () => {
+            const models = [
+                { id: 'model0', container: 'risotto-container', type: 'a-box', color: 'orange' },
+                { id: 'model1', container: 'scallops-container', type: 'a-sphere', color: 'pink' },
+                { id: 'model2', container: 'lamb-container', type: 'a-cylinder', color: 'red' }
+            ];
+
+            models.forEach(m => {
+                const el = document.getElementById(m.id);
+                el.addEventListener('model-error', () => {
+                    console.error("Model load failed for: " + m.id);
+                    const container = document.getElementById(m.container);
+                    container.innerHTML = `<${m.type} scale="0.2 0.2 0.2" color="${m.color}" animation="property: rotation; to: 0 360 0; loop: true"></${m.type}>`;
+                });
+            });
+        };
+
         window.onload = () => {
             fixAssetPaths();
+            checkModels();
             
             const loader = document.getElementById('loader');
             const instruction = document.getElementById('instruction');
@@ -149,12 +167,11 @@
                 const el = document.querySelector(t.id);
                 if (el) {
                     el.addEventListener('targetFound', () => {
-                        instruction.innerHTML = `L'ARISTO: ${t.name} siddhavagide`;
+                        instruction.innerHTML = `L'ARISTO: ${t.name} සූදානම්`;
                         instruction.style.color = "#d4af37";
-                        console.log("Target Found: " + t.name);
                     });
                     el.addEventListener('targetLost', () => {
-                        instruction.innerHTML = "Scan Maadi: Menu card scan maadi aaharada ruchi nodi";
+                        instruction.innerHTML = "ස්කෑන් කරන්න: මෙනු පත ස්කෑන් කර ආහාර නරඹන්න";
                         instruction.style.color = "white";
                     });
                 }
