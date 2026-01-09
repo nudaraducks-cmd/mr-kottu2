@@ -1,100 +1,15 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>L'ARISTO - Premium AR Experience</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-three.prod.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/GLTFLoader.js"></script>
-    <style>
-        body { margin: 0; overflow: hidden; background-color: #000; }
-        #container { width: 100vw; height: 100vh; }
-        #ui-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            color: white; font-family: sans-serif; background: rgba(0,0,0,0.7);
-            z-index: 100; transition: opacity 0.5s;
-        }
-        .error-msg { color: #ff4444; padding: 20px; text-align: center; }
-    </style>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
 </head>
-<body>
-    <div id="ui-overlay">
-        <h1>L'ARISTO</h1>
-        <div id="status">AR පද්ධතිය සක්‍රීය වේ...<br>කරුණාකර කැමරා අවසර ලබා දෙන්න.</div>
-    </div>
-    <div id="container"></div>
-
-    <script>
-        const mindarThree = new window.MINDAR.IMAGE.MindARThree({
-            container: document.querySelector("#container"),
-            imageTargetSrc: "./targets.mind", // targets.mind index.html ගාවම නිසා ./ පාවිච්චි කරයි
-        });
-
-        const {renderer, scene, camera} = mindarThree;
-        const loader = new THREE.GLTFLoader();
-
-        // 💡 1. කෑම Models (මේවා index.html ගාවම තියෙන නිසා path එක කෙලින්ම දෙමු)
-        const setupFood = (targetIndex, modelName) => {
-            const anchor = mindarThree.addAnchor(targetIndex);
-            loader.load(`./${modelName}`, (gltf) => {
-                const model = gltf.scene;
-                model.scale.set(0.1, 0.1, 0.1); 
-                anchor.group.add(model);
-            }, undefined, (error) => console.error(`Error loading ${modelName}:`, error));
-        };
-
-        // ඔයාගේ GitHub එකේ තියෙන file names වලට අනුව මේ ටික වෙනස් කළා
-        setupFood(0, 'risotto.glb');
-        setupFood(1, 'scallops.glb');
-        setupFood(2, 'lamb.glb');
-
-        // 💡 2. පියඹන සත්තු (World Space)
-        const animals = [];
-        const loadCreature = (modelName, count) => {
-            for(let i=0; i<count; i++) {
-                loader.load(`./${modelName}`, (gltf) => {
-                    const creature = gltf.scene;
-                    creature.position.set((Math.random()-0.5)*8, 1.5, (Math.random()-0.5)*8);
-                    creature.scale.set(0.04, 0.04, 0.04);
-                    scene.add(creature);
-                    animals.push({
-                        mesh: creature,
-                        speed: 0.005 + Math.random() * 0.01,
-                        yOffset: Math.random() * 5
-                    });
-                });
-            }
-        };
-
-        loadCreature('bird.glb', 3);
-        loadCreature('butterfly.glb', 4);
-
-        // Lighting
-        scene.add(new THREE.AmbientLight(0xffffff, 1));
-
-        const start = async () => {
-            try {
-                await mindarThree.start();
-                document.getElementById('ui-overlay').style.opacity = '0';
-                setTimeout(() => document.getElementById('ui-overlay').style.display = 'none', 500);
-
-                renderer.setAnimationLoop(() => {
-                    const t = Date.now() * 0.001;
-                    animals.forEach(a => {
-                        a.mesh.position.x += Math.sin(t + a.yOffset) * 0.015;
-                        a.mesh.position.z += Math.cos(t + a.yOffset) * 0.015;
-                        a.mesh.position.y += Math.sin(t * 1.5) * 0.004;
-                        a.mesh.rotation.y += 0.01;
-                    });
-                    renderer.render(scene, camera);
-                });
-            } catch (err) {
-                console.error("AR Start Error:", err);
-                document.getElementById('status').innerHTML = `<div class="error-msg">Error: ${err.message}<br>කරුණාකර HTTPS හරහා පිවිසෙන්න.</div>`;
-            }
-        }
-        start();
-    </script>
+<body style="margin:0; overflow:hidden;">
+    <a-scene mindar-image="imageTargetSrc: ./targets.mind;" color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+        <a-entity mindar-image-target="targetIndex: 0">
+            <a-box position="0 0 0" scale="0.1 0.1 0.1" color="blue"></a-box>
+        </a-entity>
+    </a-scene>
 </body>
 </html>
