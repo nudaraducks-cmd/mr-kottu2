@@ -3,92 +3,143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>L'ARISTO | Admin Environment Builder</title>
+    <title>L'ARISTO | Interactive Table Menu</title>
     
     <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
 
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+        
+        /* UI Buttons for Scrolling */
+        #menu-controls {
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 20px; z-index: 100; visibility: hidden;
+        }
+        
+        .nav-btn {
+            background: rgba(212, 175, 55, 0.9); border: none; padding: 15px 30px;
+            border-radius: 50px; color: black; font-weight: bold; cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); font-size: 18px;
+        }
+
         #loader {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: #000; display: flex; align-items: center; justify-content: center;
-            color: #d4af37; z-index: 1000; transition: opacity 1s;
+            color: #d4af37; z-index: 1000;
         }
     </style>
 </head>
 <body>
 
     <div id="loader">
-        <h2>L'ARISTO පරිසරය සකස් වේ...</h2>
+        <h2>L'ARISTO Interactive Menu...</h2>
+    </div>
+
+    <!-- Navigation UI -->
+    <div id="menu-controls">
+        <button class="nav-btn" onclick="prevItem()">මීට කලින්</button>
+        <button class="nav-btn" onclick="nextItem()">ඊළඟ එක</button>
     </div>
 
     <a-scene 
-        mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiScanning: no;" 
+        mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.0001; filterBeta: 0.005;" 
         color-space="sRGB" 
         renderer="colorManagement: true, physicallyCorrectLights: true"
         vr-mode-ui="enabled: false" 
         device-orientation-permission-ui="enabled: false">
         
         <a-assets>
+            <!-- ඔයාගේ GLB Models මෙතනට දාන්න. දැනට මම Boxes පාවිච්චි කරනවා -->
             <a-asset-item id="risotto-m" src="risotto.glb"></a-asset-item>
             <a-asset-item id="scallops-m" src="scallops.glb"></a-asset-item>
             <a-asset-item id="lamb-m" src="lamb.glb"></a-asset-item>
-            <a-asset-item id="bird-m" src="bird.glb"></a-asset-item>
-            <a-asset-item id="butterfly-m" src="butterfly.glb"></a-asset-item>
         </a-assets>
 
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-        <!-- ආලෝකය (Lighting) -->
-        <a-light type="ambient" intensity="1.2"></a-light>
-        <a-light type="directional" position="1 2 1" intensity="0.8"></a-light>
+        <a-light type="ambient" intensity="1"></a-light>
+        <a-light type="point" position="0 2 0" intensity="1.5"></a-light>
 
-        <!-- =========================================================
-             මෙන්න මෙතන තමයි ඔබ ඔබේ "Background" එක නිර්මාණය කරන්නේ
-             ========================================================= -->
-        <a-entity id="admin-created-world">
+        <!-- මෙනු එක මේසය මත (Target 0) -->
+        <a-entity mindar-image-target="targetIndex: 0" id="main-target">
             
-            <!-- දකුණු පසින් පියාඹන කුරුල්ලෙක් -->
-            <a-entity position="2 2 -4" animation="property: position; to: 2.5 2.5 -6; dur: 8000; dir: alternate; loop: true">
-                <a-gltf-model src="#bird-m" scale="0.1 0.1 0.1" animation-mixer></a-gltf-model>
+            <!-- මුළු මෙනු පද්ධතියම අඩංගු Container එක -->
+            <a-entity rotation="90 0 0" id="menu-container">
+                
+                <!-- Item 1: Risotto -->
+                <a-entity id="item-0" visible="true">
+                    <a-box color="#d4af37" scale="0.3 0.3 0.3" 
+                        animation="property: rotation; to: 0 360 0; dur: 5000; loop: true; easing: linear">
+                    </a-box>
+                    <a-entity position="0 0.5 0">
+                        <a-text value="WILD MUSHROOM RISOTTO" align="center" color="#d4af37" width="3"></a-text>
+                        <a-text value="Rs. 2,450" align="center" color="#fff" width="2" position="0 -0.2 0"></a-text>
+                    </a-entity>
+                </a-entity>
+
+                <!-- Item 2: Scallops -->
+                <a-entity id="item-1" visible="false">
+                    <a-box color="#ff4444" scale="0.3 0.3 0.3"
+                        animation="property: rotation; to: 0 360 0; dur: 5000; loop: true; easing: linear">
+                    </a-box>
+                    <a-entity position="0 0.5 0">
+                        <a-text value="PAN-SEARED SCALLOPS" align="center" color="#ff4444" width="3"></a-text>
+                        <a-text value="Rs. 3,100" align="center" color="#fff" width="2" position="0 -0.2 0"></a-text>
+                    </a-entity>
+                </a-entity>
+
+                <!-- Item 3: Lamb -->
+                <a-entity id="item-2" visible="false">
+                    <a-box color="#44ff44" scale="0.3 0.3 0.3"
+                        animation="property: rotation; to: 0 360 0; dur: 5000; loop: true; easing: linear">
+                    </a-box>
+                    <a-entity position="0 0.5 0">
+                        <a-text value="RACK OF LAMB" align="center" color="#44ff44" width="3"></a-text>
+                        <a-text value="Rs. 4,800" align="center" color="#fff" width="2" position="0 -0.2 0"></a-text>
+                    </a-entity>
+                </a-entity>
+
             </a-entity>
-
-            <!-- වම් පසින් පියාඹන තවත් කුරුල්ලෙක් -->
-            <a-entity position="-3 1.5 -5" animation="property: position; to: -2 3 -7; dur: 12000; dir: alternate; loop: true">
-                <a-gltf-model src="#bird-m" scale="0.08 0.08 0.08" animation-mixer rotation="0 180 0"></a-gltf-model>
-            </a-entity>
-
-            <!-- මැදින් පියාඹන සමනලුන් සමූහයක් -->
-            <a-entity position="0 1 -3" animation="property: rotation; to: 0 360 0; dur: 15000; easing: linear; loop: true">
-                <a-gltf-model src="#butterfly-m" scale="0.05 0.05 0.05" position="1 0.5 0" animation-mixer></a-gltf-model>
-                <a-gltf-model src="#butterfly-m" scale="0.05 0.05 0.05" position="-1 0.2 0.5" animation-mixer></a-gltf-model>
-            </a-entity>
-
-            <!-- මෙනු එකට අමතරව නිකන් ප්‍රදර්ශනයට තබා ඇති ආහාර (Decorative) -->
-            <a-entity position="1.5 -0.5 -3" rotation="0 -30 0">
-                <a-gltf-model src="#risotto-m" scale="0.1 0.1 0.1"></a-gltf-model>
-            </a-entity>
-
-        </a-entity>
-
-        <!-- TARGETS (මෙනු පත ස්කෑන් කළ විට එන ඒවා) -->
-        <a-entity mindar-image-target="targetIndex: 0">
-            <a-gltf-model src="#risotto-m" scale="0.12 0.12 0.12" rotation="90 0 0"></a-gltf-model>
-        </a-entity>
-
-        <a-entity mindar-image-target="targetIndex: 1">
-            <a-gltf-model src="#scallops-m" scale="0.1 0.1 0.1" rotation="90 0 0"></a-gltf-model>
         </a-entity>
 
     </a-scene>
 
     <script>
+        let currentIndex = 0;
+        const totalItems = 3;
+
+        function showItem(index) {
+            for (let i = 0; i < totalItems; i++) {
+                document.getElementById(`item-${i}`).setAttribute('visible', i === index);
+            }
+        }
+
+        function nextItem() {
+            currentIndex = (currentIndex + 1) % totalItems;
+            showItem(currentIndex);
+        }
+
+        function prevItem() {
+            currentIndex = (currentIndex - 1 + totalItems) % totalItems;
+            showItem(currentIndex);
+        }
+
         window.onload = () => {
+            const target = document.getElementById('main-target');
+            const controls = document.getElementById('menu-controls');
+            
+            // Target එක හම්බුනාම විතරක් බොත්තම් පෙන්වන්න
+            target.addEventListener('targetFound', () => {
+                controls.style.visibility = 'visible';
+            });
+            
+            target.addEventListener('targetLost', () => {
+                controls.style.visibility = 'hidden';
+            });
+
             setTimeout(() => {
-                document.getElementById('loader').style.opacity = '0';
-                setTimeout(() => document.getElementById('loader').style.display = 'none', 1000);
+                document.getElementById('loader').style.display = 'none';
             }, 2000);
         };
     </script>
