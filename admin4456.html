@@ -56,7 +56,7 @@
             <div class="md:col-span-2 card p-6 rounded-xl">
                 <h2 class="text-lg font-semibold mb-4 text-white text-center border-b border-gray-800 pb-4">Denata Thiyena Menu Eka</h2>
                 <div id="items-list" class="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-                    <div class="flex flex-col items-center justify-center py-20 text-gray-600">
+                    <div id="loading-spinner" class="flex flex-col items-center justify-center py-20 text-gray-600">
                         <div class="animate-spin h-6 w-6 border-2 border-gray-700 border-t-[#d4af37] rounded-full mb-4"></div>
                         <p class="italic text-sm">Firebase ekata sambanda vemin...</p>
                     </div>
@@ -70,7 +70,6 @@
         import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-        // පාරිභෝගිකයාගේ Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyBhR6spBqRutgGCqJ3bD-oDWXXZxiYPf0Q",
             authDomain: "kottu-d5c53.firebaseapp.com",
@@ -85,14 +84,13 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         const auth = getAuth(app);
-        const appId = 'mr-kottu-ar'; // මෙය ස්ථාවර path එකයි
+        const appId = 'mr-kottu-ar'; 
 
         const form = document.getElementById('add-item-form');
         const listContainer = document.getElementById('items-list');
         const authStatus = document.getElementById('auth-status');
         const dbStatus = document.getElementById('db-status');
 
-        // 1. Auth Login
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 authStatus.innerText = "AUTH: LOGGED IN";
@@ -102,20 +100,17 @@
                 signInAnonymously(auth).catch(err => {
                     authStatus.innerText = "AUTH: ERROR";
                     authStatus.classList.replace('text-gray-500', 'text-red-500');
-                    console.error("Anonymous login error. Make sure it is enabled in Firebase Console.", err);
                 });
             }
         });
 
-        // 2. Load Data from Realtime Database
         function loadMenuData() {
-            // Path එක: artifacts/mr-kottu-ar/public/data/menuItems
             const menuPath = `artifacts/${appId}/public/data/menuItems`;
             const menuRef = ref(db, menuPath);
 
             onValue(menuRef, (snapshot) => {
                 const data = snapshot.val();
-                dbStatus.innerText = `DB: CONNECTED (${menuPath})`;
+                dbStatus.innerText = `DB: CONNECTED`;
                 dbStatus.classList.replace('text-gray-600', 'text-blue-400');
                 
                 listContainer.innerHTML = '';
@@ -145,13 +140,12 @@
                     `;
                 }
             }, (error) => {
-                dbStatus.innerText = "DB: PERMISSION ERROR";
+                dbStatus.innerText = "DB: ERROR";
                 dbStatus.classList.replace('text-gray-600', 'text-red-500');
-                console.error("Firebase Read Error:", error);
+                listContainer.innerHTML = `<p class="text-center text-red-500 p-10 font-mono text-xs">Permission denied or connection lost!</p>`;
             });
         }
 
-        // 3. Add Data
         form.onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('submit-btn');
@@ -171,19 +165,16 @@
                 await push(menuRef, newItem);
                 form.reset();
             } catch (err) {
-                console.error("Save Error:", err);
-                alert("Data save kirime doshayak! Console eka check karanna.");
+                alert("Data save kirime doshayak!");
             } finally {
                 btn.disabled = false;
                 btn.innerText = "EKATHU KARANNA";
             }
         };
 
-        // 4. Delete Function
         window.deleteItem = (id) => {
             if (confirm("Meka menu eken makannada?")) {
-                remove(ref(db, `artifacts/${appId}/public/data/menuItems/${id}`))
-                    .catch(err => alert("Delete Error: " + err.message));
+                remove(ref(db, `artifacts/${appId}/public/data/menuItems/${id}`));
             }
         };
     </script>
