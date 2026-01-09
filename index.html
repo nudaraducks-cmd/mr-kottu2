@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advanced WebAR Experience</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-three.prod.js"></script>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+    #container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+    #instructions {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 15px 25px;
+      border-radius: 10px;
+      z-index: 10;
+      text-align: center;
+      max-width: 80%;
+    }
+    #loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 30px;
+      border-radius: 15px;
+      z-index: 100;
+      text-align: center;
+    }
+    .spinner {
+      border: 4px solid rgba(255,255,255,0.3);
+      border-top: 4px solid white;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="container"></div>
+  <div id="loading">
+    <h2>Loading AR Experience...</h2>
+    <div class="spinner"></div>
+    <p>Please allow camera access</p>
+  </div>
+  <div id="instructions">
+    Point camera at any surface to see flying creatures<br>
+    Tap creatures to interact!
+  </div>
+
+  <script>
+    // ==================== CONFIGURATION ====================
+    const CONFIG = {
+      maxAnimals: 8,
+      animalSpeed: 0.02,
+      spawnRadius: 3,
+      interactionDistance: 1.5,
+      soundEnabled: true
+    };
+
+    // ==================== SHADER DEFINITIONS ====================
+    const SteamShader = {
+      vertexShader: `
+        varying vec2 vUv;
+        varying vec3 vNormal;
+        varying vec3 vPosition;
+        
+        void main() {
+          vUv = uv;
+          vNormal = normalize(normalMatrix * normal);
+          vPosition = position;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform float time;
+        uniform vec3 glowColor;
+        uniform float glowIntensity;
+        varying vec2 vUv;
+        varying vec3 vNormal;
+        varying vec3 vPosition;
+        
+        void main() {
+          // Animated glow effect
+          float pulse = sin(time * 2.0) * 0.5 + 0.5;
+          float glow = pow(1.0 - abs(vNormal.y), 3.0);
+          
+          // Steam rise effect
+          float steam = sin(vPosition.y * 3.0 + time) * 0.3 + 0.7;
+          
+          vec3 color = glowColor * (glow * glowIntensity * pulse * steam);
+          float alpha = glow * glowIntensity * 0.6;
+          
+          gl_FragColor = vec4(color, alpha);
+        }
+      `
+    };
+
+    // ==================== OBJECT POOL ====================
+    class ObjectPool {
+      constructor(createFn, resetFn, initialSize = 10) {
+        this.createFn = createFn;
+        this.resetFn = resetFn;
+        this.available = [];
+        this.inUse = [];
+        
+        for (let i = 0; i < initialSize; i++) {
+          this.available.push(this.createFn());
+        }
+      }
+      
+      acquire() {
+        let obj = this.available.pop();
+        if (!obj) {
+          obj = this.createFn();
+        }
+        this.inUse.push(obj);
+        return obj;
+      }
+      
+      release(obj) {
+        const idx = this.inUse.indexOf(obj);
+        if (idx > -1) {
+          this.inUse.splice(idx, 1);
+          this.resetFn(obj);
+          this.available.push(obj);
+        }
+      }
+      
+      releaseAll() {
+        while (this.inUse.length > 0) {
+          this.release(this.inUse[0]);
+        }
+      }
+    }
+
+    // ==================== ANIMAL CONTROLLER ====================
+    class AnimatedAnimal {
+      constructor(mesh, scene) {
+        this.mesh = mesh;
+        this.scene = scene;
+        this.velocity = new THREE.Vector3();
+        this.targetPosition = new THREE.Vector3();
+        this.active = false;
+        this.lifeTime = 0;
+        this.maxLifeTime = Math.random() * 20000 + 15000;
+        this.randomizeTarget();
+      }
+      
+      randomizeTarget() {
+        const r = CONFIG.spawnRadius;
+        this.targetPosition.set(
+          (Math.random() - 0.5) * r * 2,
+          Math.random() * r + 0.5,
+          (Math.random() - 0.5) * r * 2
+        );
+      }
+      
+      activate(position) {
+        this.mesh.position.copy(position);
+        this.mesh.visible = true;
+        this.active = true;
+        this.lifeTime = 0;
+        this.randomizeTarget();
+        this.scene.add(this.mesh);
+      }
+      
+      deactivate() {
+        this.active = false;
+        this.mesh.visible = false;
+        if (this.mesh.parent) {
+          this.scene.remove(this.mesh);
+        }
+      }
+      
+      update(delta) {
+        if (!this.active) return;
+        
+        this.lifeTime += delta;
+        if (this.lifeTime > this.maxLifeTime) {
+          this.deactivate();
+          return;
+        }
+        
+        // Move towards target
+        const direction = this.targetPosition.clone().sub(this.mesh.position);
+        const distance = direction.length();
+        
+        if (distance < 0.3) {
+          this.randomizeTarget();
+        }
+        
+        direction.normalize().multiplyScalar(CONFIG.animalSpeed);
+        this.velocity.lerp(direction, 0.1);
+        this.mesh.position.add(this.velocity);
+        
+        // Face direction of movement
+        if (this.velocity.length() > 0.001) {
+          this.mesh.lookAt(this.mesh.position.clone().add(this.velocity));
+        }
+        
+        // Gentle bobbing motion
+        this.mesh.position.y += Math.sin(Date.now() * 0.003) * 0.002;
+        
+        // Flap animation
+        this.mesh.rotation.z = Math.sin(Date.now() * 0.01) * 0.2;
+      }
+      
+      interact() {
+        // Bounce away effect
+        const escapeDirection = new THREE.Vector3(
+          (Math.random() - 0.5) * 2,
+          Math.random() + 0.5,
+          (Math.random() - 0.5) * 2
+        ).normalize();
+        
+        this.velocity.add(escapeDirection.multiplyScalar(0.1));
+        this.randomizeTarget();
+        
+        // Play sound
+        if (CONFIG.soundEnabled) {
+          this.playInteractionSound();
+        }
+        
+        // Scale animation
+        const originalScale = this.mesh.scale.clone();
+        this.mesh.scale.multiplyScalar(1.3);
+        setTimeout(() => {
+          this.mesh.scale.copy(originalScale);
+        }, 200);
+      }
+      
+      playInteractionSound() {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        oscillator.frequency.value = 800;
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        
+        oscillator.start(audioCtx.currentTime);
+        oscillator.stop(audioCtx.currentTime + 0.3);
+      }
+    }
+
+    // ==================== MAIN AR APPLICATION ====================
+    class ARApp {
+      constructor() {
+        this.scene = null;
+        this.camera = null;
+        this.renderer = null;
+        this.mindarThree = null;
+        this.animals = [];
+        this.animalPool = null;
+        this.foodModel = null;
+        this.steamEffect = null;
+        this.clock = new THREE.Clock();
+        this.raycaster = new THREE.Raycaster();
+        this.mouse = new THREE.Vector2();
+      }
+      
+      async init() {
+        try {
+          // Initialize MindAR
+          this.mindarThree = new window.MINDAR.IMAGE.MindARThree({
+            container: document.getElementById('container'),
+            imageTargetSrc: this.createDefaultTarget()
+          });
+          
+          const { renderer, scene, camera } = this.mindarThree;
+          this.renderer = renderer;
+          this.scene = scene;
+          this.camera = camera;
+          
+          // Setup lighting
+          this.setupLighting();
+          
+          // Create object pool for animals
+          this.setupAnimalPool();
+          
+          // Setup food model with image tracking
+          await this.setupFoodModel();
+          
+          // Spawn initial animals
+          this.spawnAnimals(CONFIG.maxAnimals);
+          
+          // Setup interaction
+          this.setupInteraction();
+          
+          // Start AR
+          await this.mindarThree.start();
+          document.getElementById('loading').style.display = 'none';
+          
+          // Start render loop
+          this.animate();
+          
+        } catch (error) {
+          console.error('AR initialization failed:', error);
+          document.getElementById('loading').innerHTML = 
+            '<h2>Error</h2><p>Could not initialize AR. Please check camera permissions.</p>';
+        }
+      }
+      
+      createDefaultTarget() {
+        // Create a simple target image programmatically
+        // In production, use a compiled .mind file from MindAR compiler
+        return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+      }
+      
+      setupLighting() {
+        const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+        this.scene.add(ambient);
+        
+        const directional = new THREE.DirectionalLight(0xffffff, 0.6);
+        directional.position.set(1, 2, 1);
+        this.scene.add(directional);
+        
+        const hemisphere = new THREE.HemisphereLight(0xffffff, 0x444444, 0.4);
+        this.scene.add(hemisphere);
+      }
+      
+      setupAnimalPool() {
+        const createAnimal = () => {
+          // Create butterfly/bird geometry
+          const geometry = new THREE.Group();
+          
+          // Body
+          const bodyGeom = new THREE.CapsuleGeometry(0.02, 0.08, 4, 8);
+          const bodyMat = new THREE.MeshStandardMaterial({ 
+            color: 0xff6b9d,
+            metalness: 0.3,
+            roughness: 0.4
+          });
+          const body = new THREE.Mesh(bodyGeom, bodyMat);
+          geometry.add(body);
+          
+          // Wings
+          const wingGeom = new THREE.CircleGeometry(0.1, 8);
+          const wingMat = new THREE.MeshStandardMaterial({ 
+            color: 0xffd700,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.9
+          });
+          
+          const leftWing = new THREE.Mesh(wingGeom, wingMat);
+          leftWing.position.set(-0.06, 0, 0);
+          leftWing.rotation.y = Math.PI / 6;
+          geometry.add(leftWing);
+          
+          const rightWing = new THREE.Mesh(wingGeom, wingMat);
+          rightWing.position.set(0.06, 0, 0);
+          rightWing.rotation.y = -Math.PI / 6;
+          geometry.add(rightWing);
+          
+          geometry.scale.set(2, 2, 2);
+          
+          return new AnimatedAnimal(geometry, this.scene);
+        };
+        
+        const resetAnimal = (animal) => {
+          animal.deactivate();
+        };
+        
+        this.animalPool = new ObjectPool(createAnimal, resetAnimal, CONFIG.maxAnimals);
+      }
+      
+      async setupFoodModel() {
+        // Create food model group for image tracking
+        const anchor = this.mindarThree.addAnchor(0);
+        
+        // Create a placeholder 3D food model (pizza slice)
+        const foodGroup = new THREE.Group();
+        
+        // Pizza base
+        const baseGeom = new THREE.CylinderGeometry(0.4, 0.5, 0.05, 6);
+        const baseMat = new THREE.MeshStandardMaterial({ 
+          color: 0xffd700,
+          metalness: 0.2,
+          roughness: 0.8
+        });
+        const base = new THREE.Mesh(baseGeom, baseMat);
+        base.rotation.y = Math.PI / 6;
+        foodGroup.add(base);
+        
+        // Toppings
+        for (let i = 0; i < 5; i++) {
+          const toppingGeom = new THREE.SphereGeometry(0.05, 8, 8);
+          const toppingMat = new THREE.MeshStandardMaterial({ color: 0xff4444 });
+          const topping = new THREE.Mesh(toppingGeom, toppingMat);
+          topping.position.set(
+            (Math.random() - 0.5) * 0.5,
+            0.05,
+            (Math.random() - 0.5) * 0.5
+          );
+          foodGroup.add(topping);
+        }
+        
+        // Add steam/glow effect
+        const steamGeom = new THREE.PlaneGeometry(0.8, 1.2, 1, 20);
+        const steamMat = new THREE.ShaderMaterial({
+          uniforms: {
+            time: { value: 0 },
+            glowColor: { value: new THREE.Color(0xffffff) },
+            glowIntensity: { value: 0.8 }
+          },
+          vertexShader: SteamShader.vertexShader,
+          fragmentShader: SteamShader.fragmentShader,
+          transparent: true,
+          side: THREE.DoubleSide,
+          blending: THREE.AdditiveBlending
+        });
+        
+        this.steamEffect = new THREE.Mesh(steamGeom, steamMat);
+        this.steamEffect.position.y = 0.6;
+        foodGroup.add(this.steamEffect);
+        
+        foodGroup.scale.set(0.5, 0.5, 0.5);
+        anchor.group.add(foodGroup);
+        this.foodModel = foodGroup;
+      }
+      
+      spawnAnimals(count) {
+        for (let i = 0; i < count; i++) {
+          setTimeout(() => {
+            const animal = this.animalPool.acquire();
+            const spawnPos = new THREE.Vector3(
+              (Math.random() - 0.5) * 4,
+              Math.random() * 2 + 1,
+              (Math.random() - 0.5) * 4
+            );
+            animal.activate(spawnPos);
+            this.animals.push(animal);
+          }, i * 500);
+        }
+      }
+      
+      setupInteraction() {
+        const handleInteraction = (event) => {
+          const rect = this.renderer.domElement.getBoundingClientRect();
+          const x = event.clientX || (event.touches && event.touches[0].clientX);
+          const y = event.clientY || (event.touches && event.touches[0].clientY);
+          
+          this.mouse.x = ((x - rect.left) / rect.width) * 2 - 1;
+          this.mouse.y = -((y - rect.top) / rect.height) * 2 + 1;
+          
+          this.raycaster.setFromCamera(this.mouse, this.camera);
+          
+          const meshes = this.animals
+            .filter(a => a.active)
+            .map(a => a.mesh);
+          
+          const intersects = this.raycaster.intersectObjects(meshes, true);
+          
+          if (intersects.length > 0) {
+            const hitMesh = intersects[0].object.parent || intersects[0].object;
+            const animal = this.animals.find(a => a.mesh === hitMesh);
+            if (animal) {
+              animal.interact();
+            }
+          }
+        };
+        
+        this.renderer.domElement.addEventListener('click', handleInteraction);
+        this.renderer.domElement.addEventListener('touchstart', handleInteraction);
+      }
+      
+      animate() {
+        requestAnimationFrame(() => this.animate());
+        
+        const delta = this.clock.getDelta();
+        const time = this.clock.getElapsedTime();
+        
+        // Update steam shader
+        if (this.steamEffect && this.steamEffect.material.uniforms) {
+          this.steamEffect.material.uniforms.time.value = time;
+        }
+        
+        // Update animals
+        this.animals.forEach(animal => {
+          animal.update(delta * 1000);
+        });
+        
+        // Spawn new animals if some have despawned
+        const activeCount = this.animals.filter(a => a.active).length;
+        if (activeCount < CONFIG.maxAnimals && Math.random() < 0.01) {
+          const newAnimal = this.animalPool.acquire();
+          const spawnPos = new THREE.Vector3(
+            (Math.random() - 0.5) * 4,
+            Math.random() * 2 + 1,
+            (Math.random() - 0.5) * 4
+          );
+          newAnimal.activate(spawnPos);
+          this.animals.push(newAnimal);
+        }
+        
+        this.renderer.render(this.scene, this.camera);
+      }
+    }
+
+    // ==================== START APPLICATION ====================
+    window.addEventListener('DOMContentLoaded', () => {
+      const app = new ARApp();
+      app.init();
+    });
+  </script>
+</body>
+</html>
