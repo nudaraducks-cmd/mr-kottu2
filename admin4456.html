@@ -18,7 +18,10 @@
         <header class="flex justify-between items-center mb-8 border-b border-gray-800 pb-4">
             <h1 class="text-2xl font-bold text-[#d4af37]">MR KOTTU ADMIN (RTDB)</h1>
             <div class="flex flex-col items-end">
-                <span id="auth-status" class="text-xs text-gray-500 text-right font-mono">Checking Connection...</span>
+                <div class="flex items-center gap-2">
+                    <div id="conn-dot" class="w-2 h-2 rounded-full bg-red-500"></div>
+                    <span id="auth-status" class="text-xs text-gray-500 font-mono text-right">Checking Connection...</span>
+                </div>
                 <span id="db-status" class="text-[10px] text-gray-600 font-mono italic">Waiting for Firebase...</span>
             </div>
         </header>
@@ -29,15 +32,15 @@
                 <h2 class="text-lg font-semibold mb-4 text-white uppercase tracking-wider">Aluth Kaama</h2>
                 <form id="add-item-form" class="space-y-4">
                     <div>
-                        <label class="text-[10px] text-gray-500 uppercase">Kaama Nam</label>
+                        <label class="text-[10px] text-gray-500 uppercase font-bold">Kaama Nam</label>
                         <input type="text" id="name" placeholder="Ex: Cheese Kottu" required class="w-full p-3 rounded focus:outline-none focus:border-[#d4af37]">
                     </div>
                     <div>
-                        <label class="text-[10px] text-gray-500 uppercase">Mila (Rs.)</label>
+                        <label class="text-[10px] text-gray-500 uppercase font-bold">Mila (Rs.)</label>
                         <input type="number" id="price" placeholder="Ex: 1200" required class="w-full p-3 rounded focus:outline-none focus:border-[#d4af37]">
                     </div>
                     <div>
-                        <label class="text-[10px] text-gray-500 uppercase">Vargaya</label>
+                        <label class="text-[10px] text-gray-500 uppercase font-bold">Vargaya</label>
                         <select id="category" class="w-full p-3 rounded focus:outline-none focus:border-[#d4af37]">
                             <option value="Kottu">Kottu</option>
                             <option value="Rice">Rice</option>
@@ -45,7 +48,7 @@
                         </select>
                     </div>
                     <div>
-                        <label class="text-[10px] text-gray-500 uppercase">3D Model Link (Optional)</label>
+                        <label class="text-[10px] text-gray-500 uppercase font-bold">3D Model Link (Optional)</label>
                         <input type="text" id="modelUrl" placeholder="https://...model.glb" class="w-full p-3 rounded focus:outline-none focus:border-[#d4af37]">
                     </div>
                     <button type="submit" id="submit-btn" class="w-full btn-gold py-3 rounded mt-4 uppercase shadow-lg shadow-yellow-900/20">Ekathu Karanna</button>
@@ -70,6 +73,7 @@
         import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
+        // Firebase Configuration (මෙය ඔබේ Console එකේ තියෙන එකමදැයි නැවත බලන්න)
         const firebaseConfig = {
             apiKey: "AIzaSyBhR6spBqRutgGCqJ3bD-oDWXXZxiYPf0Q",
             authDomain: "kottu-d5c53.firebaseapp.com",
@@ -90,16 +94,30 @@
         const listContainer = document.getElementById('items-list');
         const authStatus = document.getElementById('auth-status');
         const dbStatus = document.getElementById('db-status');
+        const connDot = document.getElementById('conn-dot');
+
+        // Connection status check
+        const connectedRef = ref(db, ".info/connected");
+        onValue(connectedRef, (snap) => {
+            if (snap.val() === true) {
+                dbStatus.innerText = "DB: REALTIME CONNECTED";
+                connDot.classList.replace('bg-red-500', 'bg-green-500');
+            } else {
+                dbStatus.innerText = "DB: DISCONNECTED / RECONNECTING";
+                connDot.classList.replace('bg-green-500', 'bg-red-500');
+            }
+        });
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 authStatus.innerText = "AUTH: LOGGED IN";
-                authStatus.classList.replace('text-gray-500', 'text-green-500');
+                authStatus.className = "text-xs text-green-500 font-mono";
                 loadMenuData();
             } else {
                 signInAnonymously(auth).catch(err => {
-                    authStatus.innerText = "AUTH: ERROR";
-                    authStatus.classList.replace('text-gray-500', 'text-red-500');
+                    authStatus.innerText = "AUTH: ERROR - " + err.code;
+                    authStatus.className = "text-xs text-red-500 font-mono";
+                    console.error("Auth Error:", err);
                 });
             }
         });
@@ -110,9 +128,6 @@
 
             onValue(menuRef, (snapshot) => {
                 const data = snapshot.val();
-                dbStatus.innerText = `DB: CONNECTED`;
-                dbStatus.classList.replace('text-gray-600', 'text-blue-400');
-                
                 listContainer.innerHTML = '';
                 
                 if (data) {
@@ -123,26 +138,26 @@
                         itemDiv.innerHTML = `
                             <div class="flex flex-col">
                                 <span class="font-bold text-[#d4af37] tracking-wide text-lg">${item.name}</span>
-                                <div class="flex gap-3 mt-1">
-                                    <span class="text-[10px] px-2 py-0.5 bg-black rounded text-gray-400 uppercase font-semibold">${item.category}</span>
-                                    <span class="text-xs text-white/80 font-mono">Rs. ${parseFloat(item.price).toLocaleString()}</span>
+                                <div class="flex gap-3 mt-1 text-[10px] text-gray-400">
+                                    <span class="px-2 py-0.5 bg-black rounded font-semibold">${item.category}</span>
+                                    <span class="font-mono">Rs. ${parseFloat(item.price).toLocaleString()}</span>
                                 </div>
                             </div>
-                            <button onclick="window.deleteItem('${key}')" class="opacity-0 group-hover:opacity-100 bg-red-900/20 text-red-500 hover:bg-red-600 hover:text-white px-4 py-2 rounded text-xs font-bold uppercase transition-all">Makanna</button>
+                            <button onclick="window.deleteItem('${key}')" class="bg-red-900/20 text-red-500 hover:bg-red-600 hover:text-white px-3 py-1 rounded text-[10px] font-bold uppercase transition-all">Makanna</button>
                         `;
                         listContainer.appendChild(itemDiv);
                     });
                 } else {
                     listContainer.innerHTML = `
                         <div class="flex flex-col items-center justify-center py-20 text-gray-500 border-2 border-dashed border-gray-800 rounded-lg">
-                            <p class="text-sm italic text-center">Data kisivak netha.<br>Form eken aluth kaama ekathu karanna.</p>
+                            <p class="text-sm italic text-center">Menu eka hisi.<br>Ekak ekathu karala balanna.</p>
                         </div>
                     `;
                 }
             }, (error) => {
-                dbStatus.innerText = "DB: ERROR";
-                dbStatus.classList.replace('text-gray-600', 'text-red-500');
-                listContainer.innerHTML = `<p class="text-center text-red-500 p-10 font-mono text-xs">Permission denied or connection lost!</p>`;
+                dbStatus.innerText = "DB: PERMISSION DENIED / RULES ERROR";
+                console.error("Firebase Error:", error);
+                listContainer.innerHTML = `<p class="text-center text-red-500 p-10 text-xs">ඔබේ Rules පරීක්ෂා කරන්න (Permission Denied).</p>`;
             });
         }
 
@@ -165,7 +180,8 @@
                 await push(menuRef, newItem);
                 form.reset();
             } catch (err) {
-                alert("Data save kirime doshayak!");
+                alert("Data save කරන්න බැරි වුණා! Rules හෝ URL පරීක්ෂා කරන්න.");
+                console.error("Save Error:", err);
             } finally {
                 btn.disabled = false;
                 btn.innerText = "EKATHU KARANNA";
@@ -173,7 +189,7 @@
         };
 
         window.deleteItem = (id) => {
-            if (confirm("Meka menu eken makannada?")) {
+            if (confirm("මෙනු එකෙන් මකන්නද?")) {
                 remove(ref(db, `artifacts/${appId}/public/data/menuItems/${id}`));
             }
         };
