@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MR KOTTU | Admin Panel (Edit & Scale)</title>
+    <title>MR KOTTU | Admin Panel (Extended Scale)</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- A-Frame for Preview -->
+    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
     <style>
         body { background-color: #0a0a0a; color: #e5e7eb; }
         .card { background: #1a1a1a; border: 1px solid #333; }
@@ -13,10 +15,11 @@
         .btn-gold:hover { background: #b8962d; transform: translateY(-2px); }
         .edit-mode { border: 2px solid #d4af37 !important; }
         input[type=range] { accent-color: #d4af37; }
+        #preview-container { height: 250px; background: radial-gradient(circle, #222 0%, #000 100%); border-radius: 8px; overflow: hidden; position: relative; }
     </style>
 </head>
 <body class="p-4 md:p-8">
-    <div class="max-w-4xl mx-auto">
+    <div class="max-w-6xl mx-auto">
         <header class="flex justify-between items-center mb-8 border-b border-gray-800 pb-4">
             <h1 class="text-2xl font-bold text-[#d4af37]">MR KOTTU ADMIN</h1>
             <div class="flex items-center gap-2">
@@ -25,10 +28,24 @@
             </div>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <!-- Add / Edit Form -->
-            <div class="md:col-span-1 card p-6 rounded-xl h-fit" id="form-container">
+            <div class="lg:col-span-1 card p-6 rounded-xl h-fit" id="form-container">
                 <h2 id="form-title" class="text-lg font-semibold mb-4 text-white uppercase tracking-wider">Aluth Kaama</h2>
+                
+                <!-- Live 3D Preview Window -->
+                <div id="preview-container" class="mb-4 border border-gray-700">
+                    <a-scene embedded style="height: 250px; width: 100%;" vr-mode-ui="enabled: false">
+                        <a-light type="ambient" intensity="1.5"></a-light>
+                        <a-light type="directional" position="1 2 1" intensity="1"></a-light>
+                        <a-entity id="preview-model" gltf-model="" position="0 -0.2 -1.5" rotation="90 0 0" scale="0.15 0.15 0.15"></a-entity>
+                        <a-sky color="#111"></a-sky>
+                        <!-- Moved camera slightly back to accommodate larger scales in preview -->
+                        <a-camera position="0 0 1" look-controls="enabled: false"></a-camera>
+                    </a-scene>
+                    <div class="absolute bottom-2 right-2 text-[8px] bg-black/50 p-1 rounded text-gray-400">LIVE PREVIEW</div>
+                </div>
+
                 <form id="add-item-form" class="space-y-4">
                     <input type="hidden" id="edit-id">
                     <div>
@@ -51,7 +68,7 @@
                     </div>
                     <div>
                         <label class="text-[10px] text-gray-500 uppercase font-bold">3D Model URL (.glb)</label>
-                        <input type="text" id="modelUrl" placeholder="https://..." class="w-full p-2 rounded focus:outline-none">
+                        <input type="text" id="modelUrl" placeholder="Dropbox link ekak danna" class="w-full p-2 rounded focus:outline-none">
                     </div>
                     
                     <div class="p-3 bg-black/50 rounded-lg border border-gray-800 space-y-3">
@@ -60,7 +77,8 @@
                             <div class="flex justify-between">
                                 <label class="text-[9px] text-gray-500 uppercase">Scale: <span id="scale-val" class="text-white">0.15</span></label>
                             </div>
-                            <input type="range" id="scale" min="0.01" max="1.0" step="0.01" value="0.15" class="w-full h-2 rounded-lg cursor-pointer">
+                            <!-- Max scale increased to 5.0 -->
+                            <input type="range" id="scale" min="0.01" max="5.0" step="0.01" value="0.15" class="w-full h-2 rounded-lg cursor-pointer">
                         </div>
                         <div>
                             <label class="text-[9px] text-gray-500 uppercase">Rotation (X Axis): <span id="rot-val" class="text-white">90</span>°</label>
@@ -76,9 +94,9 @@
             </div>
 
             <!-- Items List -->
-            <div class="md:col-span-2 card p-6 rounded-xl">
+            <div class="lg:col-span-2 card p-6 rounded-xl">
                 <h2 class="text-lg font-semibold mb-4 text-white text-center border-b border-gray-800 pb-4">Menu & Control</h2>
-                <div id="items-list" class="space-y-3 max-h-[600px] overflow-y-auto">
+                <div id="items-list" class="space-y-3 max-h-[700px] overflow-y-auto">
                     <p class="text-center text-gray-600 italic">Loading...</p>
                 </div>
             </div>
@@ -106,9 +124,38 @@
         const auth = getAuth(app);
         const appId = 'mr-kottu-ar'; 
 
-        // Live labels
-        document.getElementById('scale').oninput = (e) => document.getElementById('scale-val').innerText = e.target.value;
-        document.getElementById('rotX').oninput = (e) => document.getElementById('rot-val').innerText = e.target.value;
+        const previewModel = document.getElementById('preview-model');
+
+        function getDirectUrl(url) {
+            if (!url) return "";
+            if (url.includes("dropbox.com")) {
+                return url.replace("?dl=0", "?raw=1").replace("www.dropbox.com", "dl.dropboxusercontent.com");
+            }
+            return url;
+        }
+
+        function updatePreview() {
+            const url = getDirectUrl(document.getElementById('modelUrl').value);
+            const s = document.getElementById('scale').value;
+            const rX = document.getElementById('rotX').value;
+            
+            if(url) {
+                previewModel.setAttribute('gltf-model', url);
+            }
+            previewModel.setAttribute('scale', `${s} ${s} ${s}`);
+            previewModel.setAttribute('rotation', `${rX} 0 0`);
+        }
+
+        // Live labels & Preview update
+        document.getElementById('scale').oninput = (e) => {
+            document.getElementById('scale-val').innerText = e.target.value;
+            updatePreview();
+        };
+        document.getElementById('rotX').oninput = (e) => {
+            document.getElementById('rot-val').innerText = e.target.value;
+            updatePreview();
+        };
+        document.getElementById('modelUrl').onchange = () => updatePreview();
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
@@ -131,12 +178,15 @@
                         const div = document.createElement('div');
                         div.className = "flex justify-between items-center p-3 bg-[#1f1f1f] border border-gray-800 rounded-lg transition-all";
                         div.innerHTML = `
-                            <div>
-                                <span class="font-bold text-[#d4af37] text-lg">${item.name}</span>
-                                <div class="flex gap-4 text-[11px] text-gray-500 mt-1">
-                                    <span>Scale: <b class="text-white">${item.scale || 0.15}</b></span>
-                                    <span>Rot: <b class="text-white">${item.rotX || 90}°</b></span>
-                                    <span>Price: <b class="text-white">Rs.${item.price}</b></span>
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 bg-black rounded border border-gray-700 flex items-center justify-center text-[10px] text-[#d4af37]">3D</div>
+                                <div>
+                                    <span class="font-bold text-[#d4af37] text-lg">${item.name}</span>
+                                    <div class="flex gap-4 text-[11px] text-gray-500">
+                                        <span>Scale: <b class="text-white">${item.scale || 0.15}</b></span>
+                                        <span>Rot: <b class="text-white">${item.rotX || 90}°</b></span>
+                                        <span>Price: <b class="text-white">Rs.${item.price}</b></span>
+                                    </div>
                                 </div>
                             </div>
                             <div class="flex gap-2">
@@ -161,7 +211,6 @@
             document.getElementById('scale').value = item.scale || 0.15;
             document.getElementById('rotX').value = item.rotX || 90;
             
-            // Update labels
             document.getElementById('scale-val').innerText = item.scale || 0.15;
             document.getElementById('rot-val').innerText = item.rotX || 90;
 
@@ -169,11 +218,9 @@
             document.getElementById('submit-btn').innerText = "Update Item";
             document.getElementById('cancel-btn').classList.remove('hidden');
             document.getElementById('form-container').classList.add('edit-mode');
+            
+            updatePreview();
             window.scrollTo({ top: 0, behavior: 'smooth' });
-        };
-
-        document.getElementById('cancel-btn').onclick = () => {
-            resetForm();
         };
 
         function resetForm() {
@@ -183,16 +230,16 @@
             document.getElementById('submit-btn').innerText = "Save Item";
             document.getElementById('cancel-btn').classList.add('hidden');
             document.getElementById('form-container').classList.remove('edit-mode');
-            document.getElementById('scale').value = 0.15;
-            document.getElementById('rotX').value = 90;
             document.getElementById('scale-val').innerText = "0.15";
             document.getElementById('rot-val').innerText = "90";
+            previewModel.setAttribute('gltf-model', '');
         }
+
+        document.getElementById('cancel-btn').onclick = () => resetForm();
 
         document.getElementById('add-item-form').onsubmit = async (e) => {
             e.preventDefault();
             const editId = document.getElementById('edit-id').value;
-            
             const itemData = {
                 name: document.getElementById('name').value,
                 price: document.getElementById('price').value,
@@ -211,9 +258,7 @@
                     await push(ref(db, `artifacts/${appId}/public/data/menuItems`), itemData);
                 }
                 resetForm();
-            } catch (err) {
-                alert("Error saving data!");
-            }
+            } catch (err) { alert("Error saving data!"); }
         };
 
         window.deleteItem = (id) => { if(confirm("Mekama sure da?")) remove(ref(db, `artifacts/${appId}/public/data/menuItems/${id}`)); };
