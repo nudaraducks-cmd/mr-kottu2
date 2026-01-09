@@ -51,10 +51,13 @@
         device-orientation-permission-ui="enabled: false">
         
         <a-assets timeout="10000">
-            <!-- Asset paths are kept relative for GitHub compatibility -->
+            <!-- පවතින ආහාර වර්ග -->
             <a-asset-item id="risotto-m" src="risotto.glb"></a-asset-item>
             <a-asset-item id="scallops-m" src="scallops.glb"></a-asset-item>
             <a-asset-item id="lamb-m" src="lamb.glb"></a-asset-item>
+            <!-- අලුතින් එක් කළ සතුන් -->
+            <a-asset-item id="bird-m" src="bird.glb"></a-asset-item>
+            <a-asset-item id="butterfly-m" src="butterfly.glb"></a-asset-item>
         </a-assets>
 
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -66,7 +69,6 @@
         <a-entity mindar-image-target="targetIndex: 0" id="target0">
             <a-entity rotation="90 0 0">
                 <a-entity id="risotto-container">
-                    <!-- GLB එක පූරණය නොවන්නේ නම් පමණක් Box එක පෙන්වයි -->
                     <a-gltf-model id="model0" src="#risotto-m" scale="0.12 0.12 0.12" 
                         animation="property: rotation; to: 0 360 0; dur: 20000; easing: linear; loop: true">
                     </a-gltf-model>
@@ -101,15 +103,41 @@
                 </a-plane>
             </a-entity>
         </a-entity>
+
+        <!-- Target 3: Bird -->
+        <a-entity mindar-image-target="targetIndex: 3" id="target3">
+            <a-entity rotation="90 0 0">
+                <a-entity id="bird-container">
+                    <a-gltf-model id="model3" src="#bird-m" scale="0.15 0.15 0.15" animation-mixer></a-gltf-model>
+                </a-entity>
+                <a-plane position="0 0.5 0" width="0.7" height="0.2" color="#000" opacity="0.7">
+                    <a-text value="Garden Bird" align="center" width="1.8" color="#d4af37"></a-text>
+                </a-plane>
+            </a-entity>
+        </a-entity>
+
+        <!-- Target 4: Butterfly -->
+        <a-entity mindar-image-target="targetIndex: 4" id="target4">
+            <a-entity rotation="90 0 0">
+                <a-entity id="butterfly-container">
+                    <a-gltf-model id="model4" src="#butterfly-m" scale="0.1 0.1 0.1" animation-mixer></a-gltf-model>
+                </a-entity>
+                <a-plane position="0 0.5 0" width="0.7" height="0.2" color="#000" opacity="0.7">
+                    <a-text value="Magical Butterfly" align="center" width="1.8" color="#d4af37"></a-text>
+                </a-plane>
+            </a-entity>
+        </a-entity>
+
     </a-scene>
 
     <script>
-        // Error handler to show visual feedback if GLB files are missing
         const setupErrorHandlers = () => {
             const models = [
                 { id: 'model0', container: 'risotto-container', type: 'a-box', color: 'orange' },
                 { id: 'model1', container: 'scallops-container', type: 'a-sphere', color: 'pink' },
-                { id: 'model2', container: 'lamb-container', type: 'a-cylinder', color: 'red' }
+                { id: 'model2', container: 'lamb-container', type: 'a-cylinder', color: 'red' },
+                { id: 'model3', container: 'bird-container', type: 'a-cone', color: 'yellow' },
+                { id: 'model4', container: 'butterfly-container', type: 'a-torus', color: 'blue' }
             ];
 
             models.forEach(m => {
@@ -140,7 +168,9 @@
             const configs = [
                 { id: '#target0', name: "Wild Mushroom Risotto" },
                 { id: '#target1', name: "Pan-Seared Scallops" },
-                { id: '#target2', name: "Rack of Lamb" }
+                { id: '#target2', name: "Rack of Lamb" },
+                { id: '#target3', name: "Garden Bird" },
+                { id: '#target4', name: "Magical Butterfly" }
             ];
 
             configs.forEach(t => {
