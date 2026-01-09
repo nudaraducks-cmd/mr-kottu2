@@ -2,74 +2,94 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>L'ARISTO AR Menu</title>
+    <title>L'ARISTO - Premium AR Experience</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-three.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/GLTFLoader.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; }
+        body { margin: 0; overflow: hidden; background-color: #000; }
         #container { width: 100vw; height: 100vh; }
-        #ui-overlay { position: absolute; bottom: 20px; width: 100%; text-align: center; color: white; font-family: 'Times New Roman', serif; z-index: 10; }
+        /* Loading Screen UI */
+        #ui-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: white; font-family: 'serif'; background: rgba(0,0,0,0.7);
+            z-index: 100; transition: opacity 0.5s;
+        }
     </style>
 </head>
 <body>
-    <div id="container"></div>
     <div id="ui-overlay">
-        <h2>L'ARISTO</h2>
-        <p>Scan the menu to see the magic!</p>
+        <h1>L'ARISTO</h1>
+        <p>AR අත්දැකීම සූදානම් වේ...</p>
+        <div id="status">කැමරාව ක්‍රියාත්මක කරන්න</div>
     </div>
+    <div id="container"></div>
 
     <script>
         const mindarThree = new window.MINDAR.IMAGE.MindARThree({
-            container: document.getElementById("container"),
-            imageTargetSrc: "./targets.mind", // ඔයා හදාගත්ත mind file එකේ නම
+            container: document.querySelector("#container"),
+            imageTargetSrc: "./targets.mind", // ඔයාගේ මෙනු එකේ mind file එක
         });
 
         const {renderer, scene, camera} = mindarThree;
         const loader = new THREE.GLTFLoader();
 
-        // 1. කෑම Models සඳහා Anchors (මෙනු එකේ target 0 සඳහා)
-        const anchor = mindarThree.addAnchor(0);
-        
-        // Risotto Model එක load කිරීම
-        loader.load('./assets/risotto.glb', (gltf) => {
-            const model = gltf.scene;
-            model.scale.set(0.2, 0.2, 0.2);
-            model.position.set(0, 0, 0);
-            anchor.group.add(model);
-        });
-
-        // 2. පියඹන සත්තු එකතු කිරීම (World Space)
-        const animals = [];
-        const spawnAnimal = () => {
-            loader.load('./assets/bird.glb', (gltf) => {
-                const bird = gltf.scene;
-                bird.scale.set(0.05, 0.05, 0.05);
-                bird.position.set((Math.random()-0.5)*4, 1, (Math.random()-0.5)*4);
-                scene.add(bird);
-                animals.push({
-                    mesh: bird,
-                    speed: 0.01 + Math.random() * 0.02,
-                    phase: Math.random() * Math.PI * 2
-                });
+        // 💡 1. මෙනු එක හඳුනාගත් විට කෑම වර්ග වෙන වෙනම පෙන්වීම
+        // මෙහි 0, 1, 2 යනු මෙනු එකේ targets වේ.
+        const setupFood = (targetIndex, modelPath) => {
+            const anchor = mindarThree.addAnchor(targetIndex);
+            loader.load(modelPath, (gltf) => {
+                const model = gltf.scene;
+                model.scale.set(0.1, 0.1, 0.1); // සයිස් එක මෙතනින් වෙනස් කරන්න
+                anchor.group.add(model);
             });
         };
 
-        // සත්තු 5ක් එකතු කරන්න
-        for(let i=0; i<5; i++) spawnAnimal();
+        // කෑම වර්ග 3ක් වෙන වෙනම Load කිරීම
+        setupFood(0, './assets/risotto.glb');
+        setupFood(1, './assets/scallops.glb');
+        setupFood(2, './assets/lamb.glb');
+
+        // 💡 2. පියඹන සත්තු (කඩේ ඇතුළේ නිදහසේ යන සත්තු)
+        const animals = [];
+        const loadCreature = (path, count) => {
+            for(let i=0; i<count; i++) {
+                loader.load(path, (gltf) => {
+                    const creature = gltf.scene;
+                    creature.position.set((Math.random()-0.5)*10, Math.random()*4, (Math.random()-0.5)*10);
+                    creature.scale.set(0.04, 0.04, 0.04);
+                    scene.add(creature);
+                    animals.push({
+                        mesh: creature,
+                        speed: 0.005 + Math.random() * 0.01,
+                        yOffset: Math.random() * Math.PI
+                    });
+                });
+            }
+        };
+
+        loadCreature('./assets/bird.glb', 3);
+        loadCreature('./assets/butterfly.glb', 4);
 
         // Lighting
-        const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
-        scene.add(light);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1);
+        scene.add(ambientLight);
 
-        const start = async() => {
+        const start = async () => {
             await mindarThree.start();
+            document.getElementById('ui-overlay').style.opacity = '0';
+            setTimeout(() => document.getElementById('ui-overlay').style.display = 'none', 500);
+
             renderer.setAnimationLoop(() => {
-                // සත්තු පියඹන animation එක
+                const t = Date.now() * 0.001;
                 animals.forEach(a => {
-                    a.mesh.position.y += Math.sin(Date.now() * 0.001 + a.phase) * 0.002;
-                    a.mesh.position.x += a.speed;
-                    if(a.mesh.position.x > 5) a.mesh.position.x = -5;
+                    // සත්තු රවුමට පියඹන animation එක
+                    a.mesh.position.x += Math.sin(t + a.yOffset) * 0.02;
+                    a.mesh.position.z += Math.cos(t + a.yOffset) * 0.02;
+                    a.mesh.position.y += Math.sin(t * 2) * 0.005;
+                    a.mesh.rotation.y += 0.01;
                 });
                 renderer.render(scene, camera);
             });
