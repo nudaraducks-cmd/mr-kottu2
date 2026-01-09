@@ -2,140 +2,110 @@
 <html lang="si">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>MR KOTTU | Interactive Table Menu</title>
-    
-    <!-- Libraries -->
-    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MR KOTTU | Admin Panel (RTDB)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: #000; touch-action: none; }
-        #ui-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; }
-        #status-bar { background: rgba(0,0,0,0.85); color: #d4af37; padding: 20px; text-align: center; font-size: 14px; letter-spacing: 1px; border-bottom: 1px solid rgba(212,175,55,0.3); }
-        #instruction-overlay { position: absolute; bottom: 100px; width: 100%; text-align: center; color: white; font-size: 14px; opacity: 0.7; visibility: hidden; }
-        #loader { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #d4af37; z-index: 1000; transition: opacity 0.8s ease; }
-        #loader img { width: 150px; height: auto; margin-bottom: 20px; animation: pulse 2s infinite ease-in-out; }
-        @keyframes pulse { 0% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } 100% { transform: scale(1); opacity: 0.8; } }
-        .spinner { width: 30px; height: 30px; border: 2px solid rgba(212,175,55,0.1); border-top: 2px solid #d4af37; border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-        .swipe-hint { width: 50px; height: 5px; background: rgba(255,255,255,0.3); margin: 10px auto; border-radius: 5px; position: relative; overflow: hidden; }
-        .swipe-hint::after { content: ''; position: absolute; width: 20px; height: 100%; background: #d4af37; animation: moveHint 2s infinite ease-in-out; }
-        @keyframes moveHint { 0% { left: -20px; } 100% { left: 50px; } }
+        body { background-color: #0a0a0a; color: #e5e7eb; }
+        .card { background: #1a1a1a; border: 1px solid #333; }
+        input, select { background: #262626 !important; border: 1px solid #444 !important; color: white !important; }
+        .btn-gold { background: #d4af37; color: black; font-weight: bold; transition: all 0.3s; }
+        .btn-gold:hover { background: #b8962d; transform: translateY(-2px); }
     </style>
 </head>
-<body>
+<body class="p-4 md:p-8">
+    <div class="max-w-4xl mx-auto">
+        <header class="flex justify-between items-center mb-8 border-b border-gray-800 pb-4">
+            <h1 class="text-2xl font-bold text-[#d4af37]">MR KOTTU ADMIN (RTDB)</h1>
+            <span id="auth-status" class="text-xs text-gray-500">Connecting...</span>
+        </header>
 
-    <div id="loader">
-        <img src="logo.png" alt="MR KOTTU LOGO" onerror="this.style.display='none'">
-        <h2 style="letter-spacing: 4px; margin-top: 0;">MR KOTTU</h2>
-        <div class="spinner"></div>
-        <p style="letter-spacing: 2px; font-size: 10px; margin-top: 20px; opacity: 0.6;">Dattans Labhdhaivemin...</p>
-    </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="md:col-span-1 card p-6 rounded-xl">
+                <h2 class="text-lg font-semibold mb-4 text-white">Kaama Ekathu Karanna</h2>
+                <form id="add-item-form" class="space-y-4">
+                    <input type="text" id="name" placeholder="Nam" required class="w-full p-2 rounded">
+                    <input type="number" id="price" placeholder="Mila" required class="w-full p-2 rounded">
+                    <select id="category" class="w-full p-2 rounded">
+                        <option value="Kottu">Kottu</option>
+                        <option value="Rice">Rice</option>
+                    </select>
+                    <input type="text" id="modelUrl" placeholder="3D Model URL (.glb)" class="w-full p-2 rounded">
+                    <button type="submit" id="submit-btn" class="w-full btn-gold py-2 rounded mt-4">EKATHU KARANNA</button>
+                </form>
+            </div>
 
-    <div id="ui-overlay">
-        <div id="status-bar">MR KOTTU IMMERSIVE MENU</div>
-        <div id="instruction-overlay">
-            <div class="swipe-hint"></div>
-            Maru Kirima Sadaha Swipe Karanna
+            <div class="md:col-span-2 card p-6 rounded-xl">
+                <h2 class="text-lg font-semibold mb-4 text-white">Denata Thiyena Menu Eka</h2>
+                <div id="items-list" class="space-y-3"></div>
+            </div>
         </div>
     </div>
 
-    <a-scene 
-        mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiScanning: no; filterMinCF: 0.001; filterBeta: 10; missTolerance: 5;" 
-        color-space="sRGB" 
-        renderer="colorManagement: true, physicallyCorrectLights: true, antialias: true, alpha: true"
-        vr-mode-ui="enabled: false" 
-        device-orientation-permission-ui="enabled: false">
-        
-        <a-assets id="assets-list">
-            <!-- Dynamic assets will be loaded here -->
-        </a-assets>
-
-        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-        <a-light type="ambient" intensity="1"></a-light>
-        <a-light type="point" position="0 3 2" intensity="1.5"></a-light>
-
-        <a-entity mindar-image-target="targetIndex: 0" id="target-anchor">
-            <a-entity rotation="90 0 0" id="menu-root-wrapper">
-                <a-entity id="menu-slider" animation="property: position; dur: 800; easing: easeOutQuint">
-                    <!-- Dynamic items from Firebase will be injected here -->
-                </a-entity>
-            </a-entity>
-        </a-entity>
-    </a-scene>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-        const firebaseConfig = JSON.parse(__firebase_config);
+        const firebaseConfig = {
+            apiKey: "AIzaSyBhR6spBqRutgGCqJ3bD-oDWXXZxiYPf0Q",
+            authDomain: "kottu-d5c53.firebaseapp.com",
+            databaseURL: "https://kottu-d5c53-default-rtdb.firebaseio.com",
+            projectId: "kottu-d5c53",
+            storageBucket: "kottu-d5c53.firebasestorage.app",
+            messagingSenderId: "899083631592",
+            appId: "1:899083631592:web:55ec627979a2d69279c25d",
+            measurementId: "G-9K189EXET2"
+        };
+
         const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        const db = getDatabase(app);
         const auth = getAuth(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'mr-kottu-ar';
+        const appId = 'mr-kottu-ar';
 
-        let currentItem = 0;
-        let menuItems = [];
-        const itemSpacing = 2.5;
+        const form = document.getElementById('add-item-form');
+        const listContainer = document.getElementById('items-list');
 
-        const slider = document.getElementById('menu-slider');
-        const loader = document.getElementById('loader');
-
-        // Auth and Data Fetching
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                const menuRef = collection(db, 'artifacts', appId, 'public', 'data', 'menuItems');
-                onSnapshot(menuRef, (snapshot) => {
-                    menuItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    renderMenu();
-                    setTimeout(() => {
-                        loader.style.opacity = '0';
-                        setTimeout(() => loader.style.display = 'none', 800);
-                    }, 1000);
-                }, (error) => console.error("Data error:", error));
+                document.getElementById('auth-status').innerText = "Connected";
+                const menuRef = ref(db, `artifacts/${appId}/public/data/menuItems`);
+                onValue(menuRef, (snapshot) => {
+                    listContainer.innerHTML = '';
+                    const data = snapshot.val();
+                    if (data) {
+                        Object.keys(data).forEach(key => {
+                            const item = data[key];
+                            const div = document.createElement('div');
+                            div.className = "flex justify-between items-center p-3 bg-[#262626] rounded border border-gray-700";
+                            div.innerHTML = `
+                                <div><p class="font-bold text-[#d4af37]">${item.name}</p></div>
+                                <button onclick="window.deleteItem('${key}')" class="text-red-500">MAKKA</button>
+                            `;
+                            listContainer.appendChild(div);
+                        });
+                    }
+                });
             } else {
                 signInAnonymously(auth);
             }
         });
 
-        function renderMenu() {
-            slider.innerHTML = '';
-            menuItems.forEach((item, index) => {
-                const entity = document.createElement('a-entity');
-                entity.setAttribute('position', `${index * itemSpacing} 0 0`);
-                
-                // If model exists, use it, otherwise use box
-                const modelHtml = item.modelUrl 
-                    ? `<a-entity gltf-model="${item.modelUrl}" scale="${item.scale || '0.1 0.1 0.1'}" animation="property: rotation; to: 0 360 0; loop: true; dur: 10000; easing: linear"></a-entity>`
-                    : `<a-box position="0 0.2 0" scale="0.3 0.3 0.3" color="${item.color || '#d4af37'}" animation="property: rotation; to: 0 360 0; loop: true; dur: 10000; easing: linear"></a-box>`;
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const newItem = {
+                name: document.getElementById('name').value,
+                price: document.getElementById('price').value,
+                category: document.getElementById('category').value,
+                modelUrl: document.getElementById('modelUrl').value
+            };
+            await push(ref(db, `artifacts/${appId}/public/data/menuItems`), newItem);
+            form.reset();
+        };
 
-                entity.innerHTML = `
-                    ${modelHtml}
-                    <a-entity position="0 0.7 0">
-                        <a-text value="${item.name.toUpperCase()}" align="center" width="2.8" color="#d4af37" font="aileron" bold="true"></a-text>
-                        <a-text value="Rs. ${item.price}" align="center" width="2" color="#fff" position="0 -0.25 0"></a-text>
-                    </a-entity>
-                `;
-                slider.appendChild(entity);
-            });
-        }
-
-        // Swipe logic
-        let touchStartX = 0;
-        window.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, {passive: true});
-        window.addEventListener('touchend', e => {
-            const touchEndX = e.changedTouches[0].screenX;
-            const swipeThreshold = 30;
-            if (touchStartX - touchEndX > swipeThreshold && currentItem < menuItems.length - 1) {
-                currentItem++;
-            } else if (touchEndX - touchStartX > swipeThreshold && currentItem > 0) {
-                currentItem--;
-            }
-            slider.setAttribute('animation', `property: position; to: ${-currentItem * itemSpacing} 0 0; dur: 800; easing: easeOutQuint`);
-        }, {passive: true});
+        window.deleteItem = (id) => {
+            remove(ref(db, `artifacts/${appId}/public/data/menuItems/${id}`));
+        };
     </script>
 </body>
 </html>
