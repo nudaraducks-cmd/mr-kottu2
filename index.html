@@ -14,51 +14,47 @@
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: #000; touch-action: none; }
         #ui-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; }
         #status-bar { background: rgba(0,0,0,0.85); color: #d4af37; padding: 20px; text-align: center; font-size: 14px; letter-spacing: 1px; border-bottom: 1px solid rgba(212,175,55,0.3); }
-        #instruction-overlay { position: absolute; bottom: 100px; width: 100%; text-align: center; color: white; font-size: 14px; opacity: 0.7; visibility: hidden; }
+        #scanning-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #d4af37; text-align: center; pointer-events: none; z-index: 5; }
         #loader { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #d4af37; z-index: 1000; transition: opacity 0.8s ease; }
         #loader img { width: 150px; height: auto; margin-bottom: 20px; animation: pulse 2s infinite ease-in-out; }
         @keyframes pulse { 0% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } 100% { transform: scale(1); opacity: 0.8; } }
         .spinner { width: 30px; height: 30px; border: 2px solid rgba(212,175,55,0.1); border-top: 2px solid #d4af37; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
-        .swipe-hint { width: 50px; height: 5px; background: rgba(255,255,255,0.3); margin: 10px auto; border-radius: 5px; position: relative; overflow: hidden; }
-        .swipe-hint::after { content: ''; position: absolute; width: 20px; height: 100%; background: #d4af37; animation: moveHint 2s infinite ease-in-out; }
-        @keyframes moveHint { 0% { left: -20px; } 100% { left: 50px; } }
     </style>
 </head>
 <body>
 
     <div id="loader">
-        <img src="logo.png" alt="MR KOTTU LOGO" onerror="this.style.display='none'">
         <h2 style="letter-spacing: 4px; margin-top: 0;">MR KOTTU</h2>
         <div class="spinner"></div>
-        <p style="letter-spacing: 2px; font-size: 10px; margin-top: 20px; opacity: 0.6;">Dattans Labhdhaivemin...</p>
+        <p style="letter-spacing: 2px; font-size: 10px; margin-top: 20px; opacity: 0.6;">Kaama List Eka Load Vemin...</p>
+    </div>
+
+    <div id="scanning-overlay" class="hidden">
+        <div class="spinner" style="margin: 0 auto 10px auto;"></div>
+        <p>Target Eka Scan Karanna...</p>
     </div>
 
     <div id="ui-overlay">
-        <div id="status-bar">MR KOTTU IMMERSIVE MENU</div>
-        <div id="instruction-overlay">
-            <div class="swipe-hint"></div>
-            Maru Kirima Sadaha Swipe Karanna
-        </div>
+        <div id="status-bar">MR KOTTU AR MENU</div>
     </div>
 
     <a-scene 
-        mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiScanning: no; filterMinCF: 0.001; filterBeta: 10; missTolerance: 5;" 
+        mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiScanning: no;" 
         color-space="sRGB" 
         renderer="colorManagement: true, physicallyCorrectLights: true, antialias: true, alpha: true"
         vr-mode-ui="enabled: false" 
         device-orientation-permission-ui="enabled: false">
         
-        <a-assets id="assets-list">
-        </a-assets>
-
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
         <a-light type="ambient" intensity="1"></a-light>
         <a-light type="point" position="0 3 2" intensity="1.5"></a-light>
 
         <a-entity mindar-image-target="targetIndex: 0" id="target-anchor">
-            <a-entity rotation="90 0 0" id="menu-root-wrapper">
+            <!-- Wrapper to orient the menu correctly on a flat table -->
+            <a-entity rotation="0 0 0" id="menu-root-wrapper">
                 <a-entity id="menu-slider" animation="property: position; dur: 800; easing: easeOutQuint">
+                    <!-- Dynamic items will be injected here -->
                 </a-entity>
             </a-entity>
         </a-entity>
@@ -85,29 +81,30 @@
         const auth = getAuth(app);
         const appId = 'mr-kottu-ar';
 
-        let currentItem = 0;
         let menuItems = [];
-        const itemSpacing = 2.5;
+        const itemSpacing = 2.0;
 
         const slider = document.getElementById('menu-slider');
         const loader = document.getElementById('loader');
+        const scanningOverlay = document.getElementById('scanning-overlay');
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // Realtime Database Path
                 const menuRef = ref(db, `artifacts/${appId}/public/data/menuItems`);
                 onValue(menuRef, (snapshot) => {
                     const data = snapshot.val();
+                    console.log("Data received from Firebase:", data);
                     if (data) {
                         menuItems = Object.keys(data).map(key => ({ id: key, ...data[key] }));
                     } else {
                         menuItems = [];
                     }
                     renderMenu();
+                    loader.style.opacity = '0';
                     setTimeout(() => {
-                        loader.style.opacity = '0';
-                        setTimeout(() => loader.style.display = 'none', 800);
-                    }, 1000);
+                        loader.style.display = 'none';
+                        scanningOverlay.classList.remove('hidden');
+                    }, 800);
                 });
             } else {
                 signInAnonymously(auth);
@@ -116,37 +113,42 @@
 
         function renderMenu() {
             slider.innerHTML = '';
+            if (menuItems.length === 0) {
+                // If no items, show a placeholder
+                const box = document.createElement('a-box');
+                box.setAttribute('color', 'red');
+                box.setAttribute('scale', '0.2 0.2 0.2');
+                slider.appendChild(box);
+                return;
+            }
+
             menuItems.forEach((item, index) => {
                 const entity = document.createElement('a-entity');
                 entity.setAttribute('position', `${index * itemSpacing} 0 0`);
                 
                 const modelHtml = item.modelUrl 
-                    ? `<a-entity gltf-model="${item.modelUrl}" scale="${item.scale || '0.1 0.1 0.1'}" animation="property: rotation; to: 0 360 0; loop: true; dur: 10000; easing: linear"></a-entity>`
-                    : `<a-box position="0 0.2 0" scale="0.3 0.3 0.3" color="${item.color || '#d4af37'}" animation="property: rotation; to: 0 360 0; loop: true; dur: 10000; easing: linear"></a-box>`;
+                    ? `<a-entity gltf-model="${item.modelUrl}" scale="0.1 0.1 0.1" animation="property: rotation; to: 0 360 0; loop: true; dur: 10000; easing: linear"></a-entity>`
+                    : `<a-box position="0 0.1 0" scale="0.2 0.2 0.2" color="#d4af37" animation="property: rotation; to: 0 360 0; loop: true; dur: 10000; easing: linear"></a-box>`;
 
                 entity.innerHTML = `
                     ${modelHtml}
-                    <a-entity position="0 0.7 0">
-                        <a-text value="${item.name.toUpperCase()}" align="center" width="2.8" color="#d4af37" font="aileron" bold="true"></a-text>
-                        <a-text value="Rs. ${item.price}" align="center" width="2" color="#fff" position="0 -0.25 0"></a-text>
+                    <a-entity position="0 0.4 0" rotation="-90 0 0">
+                        <a-text value="${item.name.toUpperCase()}" align="center" width="2" color="#d4af37" font="aileron" bold="true"></a-text>
+                        <a-text value="Rs. ${item.price}" align="center" width="1.5" color="#fff" position="0 -0.15 0"></a-text>
                     </a-entity>
                 `;
                 slider.appendChild(entity);
             });
         }
 
-        let touchStartX = 0;
-        window.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, {passive: true});
-        window.addEventListener('touchend', e => {
-            const touchEndX = e.changedTouches[0].screenX;
-            const swipeThreshold = 30;
-            if (touchStartX - touchEndX > swipeThreshold && currentItem < menuItems.length - 1) {
-                currentItem++;
-            } else if (touchEndX - touchStartX > swipeThreshold && currentItem > 0) {
-                currentItem--;
-            }
-            slider.setAttribute('animation', `property: position; to: ${-currentItem * itemSpacing} 0 0; dur: 800; easing: easeOutQuint`);
-        }, {passive: true});
+        // Scene events to manage UI
+        const sceneEl = document.querySelector('a-scene');
+        sceneEl.addEventListener('targetFound', () => {
+            scanningOverlay.style.display = 'none';
+        });
+        sceneEl.addEventListener('targetLost', () => {
+            scanningOverlay.style.display = 'block';
+        });
     </script>
 </body>
 </html>
