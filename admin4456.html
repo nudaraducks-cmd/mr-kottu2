@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MR KOTTU | Admin Panel (RTDB)</title>
+    <title>MR KOTTU | Admin Panel (RTDB & Storage)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #0a0a0a; color: #e5e7eb; }
@@ -11,28 +11,26 @@
         input, select { background: #262626 !important; border: 1px solid #444 !important; color: white !important; }
         .btn-gold { background: #d4af37; color: black; font-weight: bold; transition: all 0.3s; }
         .btn-gold:hover { background: #b8962d; transform: translateY(-2px); }
+        .upload-area { border: 2px dashed #444; transition: all 0.3s; }
+        .upload-area:hover { border-color: #d4af37; background: #222; }
     </style>
 </head>
 <body class="p-4 md:p-8">
     <div class="max-w-4xl mx-auto">
         <header class="flex justify-between items-center mb-8 border-b border-gray-800 pb-4">
-            <h1 class="text-2xl font-bold text-[#d4af37]">MR KOTTU ADMIN (RTDB)</h1>
+            <h1 class="text-2xl font-bold text-[#d4af37]">MR KOTTU ADMIN</h1>
             <div class="flex flex-col items-end">
                 <div class="flex items-center gap-2">
                     <div id="conn-dot" class="w-2 h-2 rounded-full bg-red-500"></div>
-                    <span id="auth-status" class="text-xs text-gray-500 font-mono text-right">Checking Connection...</span>
+                    <span id="auth-status" class="text-xs text-gray-500 font-mono text-right">Checking...</span>
                 </div>
-                <span id="db-status" class="text-[10px] text-gray-600 font-mono italic">Waiting for Firebase...</span>
+                <span id="db-status" class="text-[10px] text-gray-600 font-mono italic">Initializing...</span>
             </div>
         </header>
 
         <div id="auth-error-guide" class="hidden mb-6 p-4 bg-red-900/20 border border-red-500/50 rounded-lg text-red-200 text-sm">
             <p class="font-bold mb-2 font-mono uppercase text-xs text-red-500">Action Required: Authentication Error</p>
-            <ol class="list-decimal ml-4 space-y-1 opacity-90">
-                <li>Go to <a href="https://console.firebase.google.com/" target="_blank" class="underline font-bold text-white">Firebase Console</a></li>
-                <li>Build -> <b>Authentication</b> -> <b>Sign-in method</b> -> <b>Enable Anonymous</b>.</li>
-                <li>Refresh this page.</li>
-            </ol>
+            <p>Please enable <b>Anonymous Auth</b> in Firebase Console.</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -57,12 +55,14 @@
                         </select>
                     </div>
                     <div>
-                        <label class="text-[10px] text-gray-500 uppercase font-bold">3D Model URL (.glb)</label>
-                        <div class="flex gap-2">
-                            <input type="text" id="modelUrl" placeholder="https://...model.glb" class="flex-1 p-3 rounded focus:outline-none focus:border-[#d4af37]">
-                            <button type="button" onclick="window.testModel()" class="bg-blue-600 text-white px-2 rounded text-[10px] uppercase font-bold">Test</button>
+                        <label class="text-[10px] text-gray-500 uppercase font-bold">3D Model (.glb file)</label>
+                        <label class="upload-area flex flex-col items-center justify-center p-4 rounded cursor-pointer mt-1">
+                            <span id="file-name" class="text-xs text-gray-400">Choose .glb file</span>
+                            <input type="file" id="modelFile" accept=".glb" class="hidden">
+                        </label>
+                        <div id="upload-progress" class="w-full bg-gray-800 h-1 mt-2 rounded hidden">
+                            <div id="progress-bar" class="bg-[#d4af37] h-full w-0 transition-all"></div>
                         </div>
-                        <p class="text-[9px] text-gray-500 mt-1 italic">Note: URL eka kelinma .glb file ekakata sambanda viya yuthuya.</p>
                     </div>
                     <button type="submit" id="submit-btn" class="w-full btn-gold py-3 rounded mt-4 uppercase shadow-lg shadow-yellow-900/20">Ekathu Karanna</button>
                 </form>
@@ -74,7 +74,7 @@
                 <div id="items-list" class="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                     <div id="loading-spinner" class="flex flex-col items-center justify-center py-20 text-gray-600">
                         <div class="animate-spin h-6 w-6 border-2 border-gray-700 border-t-[#d4af37] rounded-full mb-4"></div>
-                        <p class="italic text-sm">Firebase ekata sambanda vemin...</p>
+                        <p class="italic text-sm">Connecting to Firebase...</p>
                     </div>
                 </div>
             </div>
@@ -85,6 +85,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getStorage, ref as sRef, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBhR6spBqRutgGCqJ3bD-oDWXXZxiYPf0Q",
@@ -100,6 +101,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         const auth = getAuth(app);
+        const storage = getStorage(app);
         const appId = 'mr-kottu-ar'; 
 
         const form = document.getElementById('add-item-form');
@@ -107,11 +109,20 @@
         const authStatus = document.getElementById('auth-status');
         const dbStatus = document.getElementById('db-status');
         const connDot = document.getElementById('conn-dot');
-        const errorGuide = document.getElementById('auth-error-guide');
+        const fileInput = document.getElementById('modelFile');
+        const fileNameLabel = document.getElementById('file-name');
+        const progressBar = document.getElementById('progress-bar');
+        const progressContainer = document.getElementById('upload-progress');
+
+        // Display selected filename
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            fileNameLabel.innerText = file ? file.name : "Choose .glb file";
+        });
 
         onValue(ref(db, ".info/connected"), (snap) => {
             if (snap.val() === true) {
-                dbStatus.innerText = "DB: REALTIME CONNECTED";
+                dbStatus.innerText = "DB: CONNECTED";
                 connDot.classList.replace('bg-red-500', 'bg-green-500');
             } else {
                 dbStatus.innerText = "DB: DISCONNECTED";
@@ -121,14 +132,13 @@
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                authStatus.innerText = "AUTH: LOGGED IN";
+                authStatus.innerText = "AUTH: OK";
                 authStatus.className = "text-xs text-green-500 font-mono";
-                errorGuide.classList.add('hidden');
                 loadMenuData();
             } else {
                 signInAnonymously(auth).catch(err => {
                     authStatus.innerText = "AUTH: ERROR";
-                    if (err.code === 'auth/configuration-not-found') errorGuide.classList.remove('hidden');
+                    authStatus.className = "text-xs text-red-500 font-mono";
                 });
             }
         });
@@ -141,17 +151,17 @@
                     Object.keys(data).forEach(key => {
                         const item = data[key];
                         const itemDiv = document.createElement('div');
-                        itemDiv.className = "flex justify-between items-center p-4 bg-[#1f1f1f] border border-gray-800 rounded-lg hover:border-[#d4af37]/50 group";
+                        itemDiv.className = "flex justify-between items-center p-4 bg-[#1f1f1f] border border-gray-800 rounded-lg group";
                         itemDiv.innerHTML = `
                             <div class="flex flex-col flex-1 truncate">
                                 <span class="font-bold text-[#d4af37] tracking-wide text-lg">${item.name}</span>
                                 <div class="flex gap-2 mt-1 items-center">
-                                    <span class="text-[10px] px-2 py-0.5 bg-black rounded text-gray-400 uppercase">${item.category}</span>
+                                    <span class="text-[10px] px-2 py-0.5 bg-black rounded text-gray-400 uppercase font-semibold">${item.category}</span>
                                     <span class="text-xs text-white/80 font-mono">Rs. ${item.price}</span>
-                                    ${item.modelUrl ? '<span class="text-[9px] text-blue-400">● 3D AR</span>' : ''}
+                                    ${item.modelUrl ? '<span class="text-[9px] text-blue-400 font-bold uppercase tracking-tighter">● 3D AR Active</span>' : ''}
                                 </div>
                             </div>
-                            <button onclick="window.deleteItem('${key}')" class="bg-red-900/20 text-red-500 hover:bg-red-600 hover:text-white px-3 py-2 rounded text-[10px] font-bold uppercase ml-2">Delete</button>
+                            <button onclick="window.deleteItem('${key}')" class="bg-red-900/20 text-red-500 hover:bg-red-600 hover:text-white px-3 py-2 rounded text-[10px] font-bold uppercase transition-all">Delete</button>
                         `;
                         listContainer.appendChild(itemDiv);
                     });
@@ -164,31 +174,70 @@
         form.onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('submit-btn');
+            const file = fileInput.files[0];
+            
             btn.disabled = true;
-            btn.innerText = "Saving...";
+            btn.innerText = "Processing...";
+            
+            let downloadUrl = "";
+
+            if (file) {
+                progressContainer.classList.remove('hidden');
+                const storageRef = sRef(storage, `models/${Date.now()}_${file.name}`);
+                const uploadTask = uploadBytesResumable(storageRef, file);
+
+                try {
+                    downloadUrl = await new Promise((resolve, reject) => {
+                        uploadTask.on('state_changed', 
+                            (snapshot) => {
+                                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                                progressBar.style.width = progress + '%';
+                                btn.innerText = `Uploading ${Math.round(progress)}%`;
+                            }, 
+                            (error) => reject(error), 
+                            () => {
+                                getDownloadURL(uploadTask.snapshot.ref).then((url) => resolve(url));
+                            }
+                        );
+                    });
+                } catch (err) {
+                    alert("Upload failed! Storage rules check කරන්න.");
+                    btn.disabled = false;
+                    btn.innerText = "Ekathu Karanna";
+                    return;
+                }
+            }
+
             const newItem = {
                 name: document.getElementById('name').value,
                 price: document.getElementById('price').value,
                 category: document.getElementById('category').value,
-                modelUrl: document.getElementById('modelUrl').value || "",
+                modelUrl: downloadUrl,
                 createdAt: Date.now()
             };
+
             try {
                 await push(ref(db, `artifacts/${appId}/public/data/menuItems`), newItem);
                 form.reset();
+                fileNameLabel.innerText = "Choose .glb file";
+                progressContainer.classList.add('hidden');
+                progressBar.style.width = '0%';
             } catch (err) { alert("Error saving data!"); }
-            btn.disabled = false; btn.innerText = "EKATHU KARANNA";
-        };
-
-        window.testModel = () => {
-            const url = document.getElementById('modelUrl').value;
-            if(!url) return alert("Please enter a URL first!");
-            window.open(`https://modelviewer.dev/editor/index.html?src=${encodeURIComponent(url)}`, '_blank');
+            
+            btn.disabled = false; 
+            btn.innerText = "Ekathu Karanna";
         };
 
         window.deleteItem = (id) => {
             if (confirm("Delete this item?")) remove(ref(db, `artifacts/${appId}/public/data/menuItems/${id}`));
         };
     </script>
+
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+    </style>
 </body>
 </html>
+
