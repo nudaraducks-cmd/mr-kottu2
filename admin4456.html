@@ -17,27 +17,50 @@
     <div class="max-w-4xl mx-auto">
         <header class="flex justify-between items-center mb-8 border-b border-gray-800 pb-4">
             <h1 class="text-2xl font-bold text-[#d4af37]">MR KOTTU ADMIN (RTDB)</h1>
-            <span id="auth-status" class="text-xs text-gray-500">Connecting...</span>
+            <div class="flex flex-col items-end">
+                <span id="auth-status" class="text-xs text-gray-500 text-right font-mono">Checking Connection...</span>
+                <span id="db-status" class="text-[10px] text-gray-600 font-mono italic">Waiting for Firebase...</span>
+            </div>
         </header>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div class="md:col-span-1 card p-6 rounded-xl">
-                <h2 class="text-lg font-semibold mb-4 text-white">Kaama Ekathu Karanna</h2>
+            <!-- Add Item Form -->
+            <div class="md:col-span-1 card p-6 rounded-xl h-fit">
+                <h2 class="text-lg font-semibold mb-4 text-white uppercase tracking-wider">Aluth Kaama</h2>
                 <form id="add-item-form" class="space-y-4">
-                    <input type="text" id="name" placeholder="Nam" required class="w-full p-2 rounded">
-                    <input type="number" id="price" placeholder="Mila" required class="w-full p-2 rounded">
-                    <select id="category" class="w-full p-2 rounded">
-                        <option value="Kottu">Kottu</option>
-                        <option value="Rice">Rice</option>
-                    </select>
-                    <input type="text" id="modelUrl" placeholder="3D Model URL (.glb)" class="w-full p-2 rounded">
-                    <button type="submit" id="submit-btn" class="w-full btn-gold py-2 rounded mt-4">EKATHU KARANNA</button>
+                    <div>
+                        <label class="text-[10px] text-gray-500 uppercase">Kaama Nam</label>
+                        <input type="text" id="name" placeholder="Ex: Cheese Kottu" required class="w-full p-3 rounded focus:outline-none focus:border-[#d4af37]">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-gray-500 uppercase">Mila (Rs.)</label>
+                        <input type="number" id="price" placeholder="Ex: 1200" required class="w-full p-3 rounded focus:outline-none focus:border-[#d4af37]">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-gray-500 uppercase">Vargaya</label>
+                        <select id="category" class="w-full p-3 rounded focus:outline-none focus:border-[#d4af37]">
+                            <option value="Kottu">Kottu</option>
+                            <option value="Rice">Rice</option>
+                            <option value="Drinks">Drinks</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-gray-500 uppercase">3D Model Link (Optional)</label>
+                        <input type="text" id="modelUrl" placeholder="https://...model.glb" class="w-full p-3 rounded focus:outline-none focus:border-[#d4af37]">
+                    </div>
+                    <button type="submit" id="submit-btn" class="w-full btn-gold py-3 rounded mt-4 uppercase shadow-lg shadow-yellow-900/20">Ekathu Karanna</button>
                 </form>
             </div>
 
+            <!-- Items List -->
             <div class="md:col-span-2 card p-6 rounded-xl">
-                <h2 class="text-lg font-semibold mb-4 text-white">Denata Thiyena Menu Eka</h2>
-                <div id="items-list" class="space-y-3"></div>
+                <h2 class="text-lg font-semibold mb-4 text-white text-center border-b border-gray-800 pb-4">Denata Thiyena Menu Eka</h2>
+                <div id="items-list" class="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                    <div class="flex flex-col items-center justify-center py-20 text-gray-600">
+                        <div class="animate-spin h-6 w-6 border-2 border-gray-700 border-t-[#d4af37] rounded-full mb-4"></div>
+                        <p class="italic text-sm">Firebase ekata sambanda vemin...</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -47,6 +70,7 @@
         import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
+        // පාරිභෝගිකයාගේ Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyBhR6spBqRutgGCqJ3bD-oDWXXZxiYPf0Q",
             authDomain: "kottu-d5c53.firebaseapp.com",
@@ -61,51 +85,114 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         const auth = getAuth(app);
-        const appId = 'mr-kottu-ar';
+        const appId = 'mr-kottu-ar'; // මෙය ස්ථාවර path එකයි
 
         const form = document.getElementById('add-item-form');
         const listContainer = document.getElementById('items-list');
+        const authStatus = document.getElementById('auth-status');
+        const dbStatus = document.getElementById('db-status');
 
+        // 1. Auth Login
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                document.getElementById('auth-status').innerText = "Connected";
-                const menuRef = ref(db, `artifacts/${appId}/public/data/menuItems`);
-                onValue(menuRef, (snapshot) => {
-                    listContainer.innerHTML = '';
-                    const data = snapshot.val();
-                    if (data) {
-                        Object.keys(data).forEach(key => {
-                            const item = data[key];
-                            const div = document.createElement('div');
-                            div.className = "flex justify-between items-center p-3 bg-[#262626] rounded border border-gray-700";
-                            div.innerHTML = `
-                                <div><p class="font-bold text-[#d4af37]">${item.name}</p></div>
-                                <button onclick="window.deleteItem('${key}')" class="text-red-500">MAKKA</button>
-                            `;
-                            listContainer.appendChild(div);
-                        });
-                    }
-                });
+                authStatus.innerText = "AUTH: LOGGED IN";
+                authStatus.classList.replace('text-gray-500', 'text-green-500');
+                loadMenuData();
             } else {
-                signInAnonymously(auth);
+                signInAnonymously(auth).catch(err => {
+                    authStatus.innerText = "AUTH: ERROR";
+                    authStatus.classList.replace('text-gray-500', 'text-red-500');
+                    console.error("Anonymous login error. Make sure it is enabled in Firebase Console.", err);
+                });
             }
         });
 
+        // 2. Load Data from Realtime Database
+        function loadMenuData() {
+            // Path එක: artifacts/mr-kottu-ar/public/data/menuItems
+            const menuPath = `artifacts/${appId}/public/data/menuItems`;
+            const menuRef = ref(db, menuPath);
+
+            onValue(menuRef, (snapshot) => {
+                const data = snapshot.val();
+                dbStatus.innerText = `DB: CONNECTED (${menuPath})`;
+                dbStatus.classList.replace('text-gray-600', 'text-blue-400');
+                
+                listContainer.innerHTML = '';
+                
+                if (data) {
+                    Object.keys(data).forEach(key => {
+                        const item = data[key];
+                        const itemDiv = document.createElement('div');
+                        itemDiv.className = "flex justify-between items-center p-4 bg-[#1f1f1f] border border-gray-800 rounded-lg hover:border-[#d4af37]/50 transition-colors group";
+                        itemDiv.innerHTML = `
+                            <div class="flex flex-col">
+                                <span class="font-bold text-[#d4af37] tracking-wide text-lg">${item.name}</span>
+                                <div class="flex gap-3 mt-1">
+                                    <span class="text-[10px] px-2 py-0.5 bg-black rounded text-gray-400 uppercase font-semibold">${item.category}</span>
+                                    <span class="text-xs text-white/80 font-mono">Rs. ${parseFloat(item.price).toLocaleString()}</span>
+                                </div>
+                            </div>
+                            <button onclick="window.deleteItem('${key}')" class="opacity-0 group-hover:opacity-100 bg-red-900/20 text-red-500 hover:bg-red-600 hover:text-white px-4 py-2 rounded text-xs font-bold uppercase transition-all">Makanna</button>
+                        `;
+                        listContainer.appendChild(itemDiv);
+                    });
+                } else {
+                    listContainer.innerHTML = `
+                        <div class="flex flex-col items-center justify-center py-20 text-gray-500 border-2 border-dashed border-gray-800 rounded-lg">
+                            <p class="text-sm italic text-center">Data kisivak netha.<br>Form eken aluth kaama ekathu karanna.</p>
+                        </div>
+                    `;
+                }
+            }, (error) => {
+                dbStatus.innerText = "DB: PERMISSION ERROR";
+                dbStatus.classList.replace('text-gray-600', 'text-red-500');
+                console.error("Firebase Read Error:", error);
+            });
+        }
+
+        // 3. Add Data
         form.onsubmit = async (e) => {
             e.preventDefault();
+            const btn = document.getElementById('submit-btn');
+            btn.disabled = true;
+            btn.innerText = "Saving...";
+
             const newItem = {
                 name: document.getElementById('name').value,
                 price: document.getElementById('price').value,
                 category: document.getElementById('category').value,
-                modelUrl: document.getElementById('modelUrl').value
+                modelUrl: document.getElementById('modelUrl').value || "",
+                createdAt: Date.now()
             };
-            await push(ref(db, `artifacts/${appId}/public/data/menuItems`), newItem);
-            form.reset();
+
+            try {
+                const menuRef = ref(db, `artifacts/${appId}/public/data/menuItems`);
+                await push(menuRef, newItem);
+                form.reset();
+            } catch (err) {
+                console.error("Save Error:", err);
+                alert("Data save kirime doshayak! Console eka check karanna.");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "EKATHU KARANNA";
+            }
         };
 
+        // 4. Delete Function
         window.deleteItem = (id) => {
-            remove(ref(db, `artifacts/${appId}/public/data/menuItems/${id}`));
+            if (confirm("Meka menu eken makannada?")) {
+                remove(ref(db, `artifacts/${appId}/public/data/menuItems/${id}`))
+                    .catch(err => alert("Delete Error: " + err.message));
+            }
         };
     </script>
+
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #444; }
+    </style>
 </body>
 </html>
