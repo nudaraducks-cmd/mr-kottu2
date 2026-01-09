@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MR KOTTU | Admin Panel (Extended Scale)</title>
+    <title>MR KOTTU | Admin Panel (Mega Scale Fix)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- A-Frame for Preview -->
     <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
@@ -15,7 +15,7 @@
         .btn-gold:hover { background: #b8962d; transform: translateY(-2px); }
         .edit-mode { border: 2px solid #d4af37 !important; }
         input[type=range] { accent-color: #d4af37; }
-        #preview-container { height: 250px; background: radial-gradient(circle, #222 0%, #000 100%); border-radius: 8px; overflow: hidden; position: relative; }
+        #preview-container { height: 300px; background: radial-gradient(circle, #222 0%, #000 100%); border-radius: 8px; overflow: hidden; position: relative; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -35,15 +35,16 @@
                 
                 <!-- Live 3D Preview Window -->
                 <div id="preview-container" class="mb-4 border border-gray-700">
-                    <a-scene embedded style="height: 250px; width: 100%;" vr-mode-ui="enabled: false">
+                    <a-scene embedded style="height: 300px; width: 100%;" vr-mode-ui="enabled: false">
                         <a-light type="ambient" intensity="1.5"></a-light>
                         <a-light type="directional" position="1 2 1" intensity="1"></a-light>
-                        <a-entity id="preview-model" gltf-model="" position="0 -0.2 -1.5" rotation="90 0 0" scale="0.15 0.15 0.15"></a-entity>
+                        <!-- Updated default position to accommodate huge scales -->
+                        <a-entity id="preview-model" gltf-model="" position="0 -0.5 -3" rotation="90 0 0" scale="0.15 0.15 0.15"></a-entity>
                         <a-sky color="#111"></a-sky>
-                        <!-- Moved camera slightly back to accommodate larger scales in preview -->
-                        <a-camera position="0 0 1" look-controls="enabled: false"></a-camera>
+                        <!-- Camera moved further back (Z=2) to see huge models -->
+                        <a-camera id="preview-camera" position="0 0 2" look-controls="enabled: false"></a-camera>
                     </a-scene>
-                    <div class="absolute bottom-2 right-2 text-[8px] bg-black/50 p-1 rounded text-gray-400">LIVE PREVIEW</div>
+                    <div class="absolute bottom-2 right-2 text-[8px] bg-black/50 p-1 rounded text-gray-400 font-bold uppercase">Mega Preview Active</div>
                 </div>
 
                 <form id="add-item-form" class="space-y-4">
@@ -75,13 +76,13 @@
                         <p class="text-[10px] text-[#d4af37] font-bold uppercase">3D Adjustments (Live)</p>
                         <div>
                             <div class="flex justify-between">
-                                <label class="text-[9px] text-gray-500 uppercase">Scale: <span id="scale-val" class="text-white">0.15</span></label>
+                                <label class="text-[9px] text-gray-500 uppercase">Scale: <span id="scale-val" class="text-white font-bold">0.15</span></label>
                             </div>
-                            <!-- Max scale increased to 5.0 -->
-                            <input type="range" id="scale" min="0.01" max="5.0" step="0.01" value="0.15" class="w-full h-2 rounded-lg cursor-pointer">
+                            <!-- Max scale set to 10.0 for extreme zooming -->
+                            <input type="range" id="scale" min="0.01" max="10.0" step="0.01" value="0.15" class="w-full h-2 rounded-lg cursor-pointer">
                         </div>
                         <div>
-                            <label class="text-[9px] text-gray-500 uppercase">Rotation (X Axis): <span id="rot-val" class="text-white">90</span>°</label>
+                            <label class="text-[9px] text-gray-500 uppercase">Rotation (X Axis): <span id="rot-val" class="text-white font-bold">90</span>°</label>
                             <input type="range" id="rotX" min="0" max="360" step="1" value="90" class="w-full h-2 rounded-lg cursor-pointer">
                         </div>
                     </div>
@@ -95,7 +96,7 @@
 
             <!-- Items List -->
             <div class="lg:col-span-2 card p-6 rounded-xl">
-                <h2 class="text-lg font-semibold mb-4 text-white text-center border-b border-gray-800 pb-4">Menu & Control</h2>
+                <h2 class="text-lg font-semibold mb-4 text-white text-center border-b border-gray-800 pb-4 uppercase tracking-widest">Menu & Control</h2>
                 <div id="items-list" class="space-y-3 max-h-[700px] overflow-y-auto">
                     <p class="text-center text-gray-600 italic">Loading...</p>
                 </div>
@@ -125,6 +126,7 @@
         const appId = 'mr-kottu-ar'; 
 
         const previewModel = document.getElementById('preview-model');
+        const previewCamera = document.getElementById('preview-camera');
 
         function getDirectUrl(url) {
             if (!url) return "";
@@ -136,14 +138,26 @@
 
         function updatePreview() {
             const url = getDirectUrl(document.getElementById('modelUrl').value);
-            const s = document.getElementById('scale').value;
+            const s = parseFloat(document.getElementById('scale').value);
             const rX = document.getElementById('rotX').value;
             
             if(url) {
                 previewModel.setAttribute('gltf-model', url);
             }
+            
+            // Apply scale
             previewModel.setAttribute('scale', `${s} ${s} ${s}`);
             previewModel.setAttribute('rotation', `${rX} 0 0`);
+
+            // DYNAMIC CAMERA: Adjust camera Z based on scale so it doesn't clip or disappear
+            // If scale is very large, move camera further back automatically
+            let cameraZ = 1.5 + (s * 0.5); 
+            previewCamera.setAttribute('position', `0 0 ${cameraZ}`);
+            
+            // Adjust model Y to keep it centered when growing
+            let modelY = -0.2 * s;
+            if(modelY < -1.5) modelY = -1.5; // cap it
+            previewModel.setAttribute('position', `0 ${modelY} -${s * 0.8}`);
         }
 
         // Live labels & Preview update
@@ -176,22 +190,22 @@
                     Object.keys(data).forEach(key => {
                         const item = data[key];
                         const div = document.createElement('div');
-                        div.className = "flex justify-between items-center p-3 bg-[#1f1f1f] border border-gray-800 rounded-lg transition-all";
+                        div.className = "flex justify-between items-center p-3 bg-[#1f1f1f] border border-gray-800 rounded-lg transition-all hover:border-[#d4af37]/50";
                         div.innerHTML = `
                             <div class="flex items-center gap-4">
-                                <div class="w-10 h-10 bg-black rounded border border-gray-700 flex items-center justify-center text-[10px] text-[#d4af37]">3D</div>
+                                <div class="w-10 h-10 bg-black rounded border border-gray-700 flex items-center justify-center text-[10px] text-[#d4af37] font-bold">3D</div>
                                 <div>
-                                    <span class="font-bold text-[#d4af37] text-lg">${item.name}</span>
-                                    <div class="flex gap-4 text-[11px] text-gray-500">
-                                        <span>Scale: <b class="text-white">${item.scale || 0.15}</b></span>
-                                        <span>Rot: <b class="text-white">${item.rotX || 90}°</b></span>
-                                        <span>Price: <b class="text-white">Rs.${item.price}</b></span>
+                                    <span class="font-bold text-[#d4af37] text-lg uppercase tracking-tight">${item.name}</span>
+                                    <div class="flex gap-4 text-[11px] text-gray-500 font-mono">
+                                        <span>SCALE: <b class="text-white">${item.scale || 0.15}</b></span>
+                                        <span>ROT: <b class="text-white">${item.rotX || 90}°</b></span>
+                                        <span>PRICE: <b class="text-white">Rs.${item.price}</b></span>
                                     </div>
                                 </div>
                             </div>
                             <div class="flex gap-2">
-                                <button onclick="window.editItem('${key}', ${JSON.stringify(item).replace(/"/g, '&quot;')})" class="bg-blue-600/20 text-blue-400 px-3 py-1 rounded text-xs font-bold border border-blue-600/30">EDIT</button>
-                                <button onclick="window.deleteItem('${key}')" class="bg-red-600/20 text-red-400 px-3 py-1 rounded text-xs font-bold border border-red-600/30">DEL</button>
+                                <button onclick="window.editItem('${key}', ${JSON.stringify(item).replace(/"/g, '&quot;')})" class="bg-blue-600/20 text-blue-400 px-4 py-1.5 rounded text-xs font-bold border border-blue-600/30 hover:bg-blue-600 hover:text-white transition-all">EDIT</button>
+                                <button onclick="window.deleteItem('${key}')" class="bg-red-600/20 text-red-400 px-4 py-1.5 rounded text-xs font-bold border border-red-600/30 hover:bg-red-600 hover:text-white transition-all">DEL</button>
                             </div>
                         `;
                         list.appendChild(div);
@@ -233,6 +247,7 @@
             document.getElementById('scale-val').innerText = "0.15";
             document.getElementById('rot-val').innerText = "90";
             previewModel.setAttribute('gltf-model', '');
+            previewCamera.setAttribute('position', '0 0 1.5');
         }
 
         document.getElementById('cancel-btn').onclick = () => resetForm();
