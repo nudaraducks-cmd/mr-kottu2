@@ -36,7 +36,7 @@
         }
 
         #loader img {
-            width: 150px; /* ලෝගෝ එකේ ප්‍රමාණය මෙතනින් වෙනස් කරන්න පුළුවන් */
+            width: 150px; 
             height: auto;
             margin-bottom: 20px;
             animation: pulse 2s infinite ease-in-out;
@@ -83,8 +83,14 @@
         </div>
     </div>
 
+    <!-- 
+        වැදගත් වෙනස්කම්:
+        - filterMinCF: 0.001 (කලින් 0.0001) -> චලනයන් වලට ප්‍රතිචාර දක්වන වේගය වැඩි කළා (Live look)
+        - filterBeta: 10 (කලින් 0.001) -> Jitter එක අඩු කරන අතරතුරම, distance එකට අනුව scale වීම live කරනවා
+        - missTolerance: 5 -> ටාගට් එක අතහැරී ඇති බව වහාම හඳුනාගෙන "stuck" වීම වලක්වනවා
+    -->
     <a-scene 
-        mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiScanning: no; filterMinCF: 0.0001; filterBeta: 0.001; missTolerance: 100; warmUpTolerance: 5;" 
+        mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiScanning: no; filterMinCF: 0.001; filterBeta: 10; missTolerance: 5; warmUpTolerance: 5;" 
         color-space="sRGB" 
         renderer="colorManagement: true, physicallyCorrectLights: true, antialias: true, alpha: true"
         vr-mode-ui="enabled: false" 
@@ -190,7 +196,6 @@
             const loader = document.getElementById('loader');
             const target = document.getElementById('target-anchor');
 
-            // ඇප් එක load වුණාම ලෝඩර් එක අයින් කරන්න
             setTimeout(() => { 
                 loader.style.opacity = '0'; 
                 setTimeout(() => loader.style.display = 'none', 800); 
@@ -201,11 +206,7 @@
             });
 
             target.addEventListener('targetLost', () => {
-                setTimeout(() => {
-                    if (!target.getAttribute('mindar-image-target').isTargetFound) {
-                        instruction.style.visibility = 'hidden';
-                    }
-                }, 2000);
+                instruction.style.visibility = 'hidden';
             });
         });
     </script>
