@@ -2,13 +2,14 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>L'ARISTO - Real AR Menu</title>
+    <title>L'ARISTO Premium AR</title>
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
 </head>
 <body style="margin:0; overflow:hidden;">
+    
     <a-scene 
-        mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.0001; filterBeta: 0.001;" 
+        mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.0001; filterBeta: 0.001; missTolerance: 600" 
         color-space="sRGB" 
         renderer="colorManagement: true, physicallyCorrectLights" 
         vr-mode-ui="enabled: false" 
@@ -19,6 +20,7 @@
             <a-asset-item id="scallops" src="./scallops.glb"></a-asset-item>
             <a-asset-item id="lamb" src="./lamb.glb"></a-asset-item>
             <a-asset-item id="bird" src="./bird.glb"></a-asset-item>
+            <a-asset-item id="butterfly" src="./butterfly.glb"></a-asset-item>
         </a-assets>
 
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -35,14 +37,16 @@
             <a-gltf-model src="#lamb" rotation="90 0 0" position="0 0 0.1" scale="0.1 0.1 0.1"></a-gltf-model>
         </a-entity>
 
-        <a-entity position="0 2 -5">
-            <a-gltf-model src="#bird" scale="0.05 0.05 0.05" 
-                animation="property: position; to: 2 1 2; dur: 5000; dir: alternate; loop: true">
-            </a-gltf-model>
+        <a-entity position="0 2 -4" animation="property: position; to: 2 3 -2; dur: 7000; dir: alternate; loop: true">
+            <a-gltf-model src="#bird" scale="0.05 0.05 0.05"></a-gltf-model>
         </a-entity>
 
-        <a-light type="ambient" intensity="1.5"></a-light>
-        <a-light type="directional" position="0 5 0" intensity="1"></a-light>
+        <a-entity position="-2 1.5 -3" animation="property: position; to: 2 2 -3; dur: 5000; dir: alternate; loop: true">
+            <a-gltf-model src="#butterfly" scale="0.03 0.03 0.03"></a-gltf-model>
+        </a-entity>
+
+        <a-light type="ambient" intensity="1.2"></a-light>
+        <a-light type="directional" position="0 5 2" intensity="0.8"></a-light>
     </a-scene>
 </body>
 </html>
