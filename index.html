@@ -59,7 +59,6 @@
         <a-light type="directional" position="0 10 5" intensity="0.8"></a-light>
 
         <a-entity mindar-image-target="targetIndex: 0" id="target-anchor">
-            <!-- Root wrapper adjusted to lay flat on the target -->
             <a-entity rotation="0 0 0" id="menu-root-wrapper">
                 <a-entity id="menu-slider" position="0 0 0" animation="property: position; dur: 600; easing: easeOutQuad">
                     <!-- Items will be injected here -->
@@ -100,22 +99,16 @@
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                const menuRef = ref(db, `artifacts/${appId}/public/data/menuItems`);
-                onValue(menuRef, (snapshot) => {
+                onValue(ref(db, `artifacts/${appId}/public/data/menuItems`), (snapshot) => {
                     const data = snapshot.val();
                     if (data) {
                         menuItems = Object.keys(data).map(key => ({ id: key, ...data[key] }));
                         renderMenu();
                     }
                     loader.style.opacity = '0';
-                    setTimeout(() => {
-                        loader.style.display = 'none';
-                        scanningOverlay.classList.remove('hidden');
-                    }, 800);
+                    setTimeout(() => { loader.style.display = 'none'; scanningOverlay.classList.remove('hidden'); }, 800);
                 });
-            } else {
-                signInAnonymously(auth);
-            }
+            } else { signInAnonymously(auth); }
         });
 
         function getDirectUrl(url) {
@@ -133,11 +126,12 @@
                 entity.setAttribute('position', `${index * itemSpacing} 0 0.2`);
                 
                 const finalUrl = getDirectUrl(item.modelUrl);
+                const s = item.scale || 0.15; // Custom Scale
+                const rX = item.rotX || 90;   // Custom Rotation (Base X)
                 
-                // Rotation adjusted to 90 0 0 so it stands up correctly relative to the table surface
                 const modelHtml = finalUrl 
-                    ? `<a-entity gltf-model="${finalUrl}" scale="0.15 0.15 0.15" rotation="90 0 0" position="0 0 0" animation="property: rotation; from: 90 0 0; to: 90 360 0; loop: true; dur: 12000; easing: linear"></a-entity>`
-                    : `<a-box position="0 0 0" scale="0.3 0.3 0.3" color="#d4af37" rotation="90 0 0"></a-box>`;
+                    ? `<a-entity gltf-model="${finalUrl}" scale="${s} ${s} ${s}" rotation="${rX} 0 0" position="0 0 0" animation="property: rotation; from: ${rX} 0 0; to: ${rX} 360 0; loop: true; dur: 12000; easing: linear"></a-entity>`
+                    : `<a-box position="0 0 0" scale="0.3 0.3 0.3" color="#d4af37" rotation="${rX} 0 0"></a-box>`;
 
                 entity.innerHTML = `
                     ${modelHtml}
@@ -154,20 +148,12 @@
             currentIndex += direction;
             if (currentIndex < 0) currentIndex = 0;
             if (currentIndex >= menuItems.length) currentIndex = menuItems.length - 1;
-            
-            const newX = -currentIndex * itemSpacing;
-            slider.setAttribute('animation', `property: position; to: ${newX} 0 0; dur: 600; easing: easeOutQuad`);
+            slider.setAttribute('animation', `property: position; to: ${-currentIndex * itemSpacing} 0 0; dur: 600; easing: easeOutQuad`);
         };
 
         const sceneEl = document.querySelector('a-scene');
-        sceneEl.addEventListener('targetFound', () => {
-            scanningOverlay.classList.add('hidden');
-            controls.classList.remove('hidden');
-        });
-        sceneEl.addEventListener('targetLost', () => {
-            scanningOverlay.classList.remove('hidden');
-            controls.classList.add('hidden');
-        });
+        sceneEl.addEventListener('targetFound', () => { scanningOverlay.classList.add('hidden'); controls.classList.remove('hidden'); });
+        sceneEl.addEventListener('targetLost', () => { scanningOverlay.classList.remove('hidden'); controls.classList.add('hidden'); });
     </script>
 </body>
 </html>
