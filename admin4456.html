@@ -26,6 +26,15 @@
             </div>
         </header>
 
+        <div id="auth-error-guide" class="hidden mb-6 p-4 bg-red-900/20 border border-red-500/50 rounded-lg text-red-200 text-sm">
+            <p class="font-bold mb-2 font-mono uppercase text-xs text-red-500">Action Required: Authentication Error</p>
+            <ol class="list-decimal ml-4 space-y-1 opacity-90">
+                <li>Go to <a href="https://console.firebase.google.com/" target="_blank" class="underline font-bold text-white">Firebase Console</a></li>
+                <li>Build -> <b>Authentication</b> -> <b>Sign-in method</b> -> <b>Enable Anonymous</b>.</li>
+                <li>Refresh this page.</li>
+            </ol>
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
             <!-- Add Item Form -->
             <div class="md:col-span-1 card p-6 rounded-xl h-fit">
@@ -48,8 +57,12 @@
                         </select>
                     </div>
                     <div>
-                        <label class="text-[10px] text-gray-500 uppercase font-bold">3D Model Link (Optional)</label>
-                        <input type="text" id="modelUrl" placeholder="https://...model.glb" class="w-full p-3 rounded focus:outline-none focus:border-[#d4af37]">
+                        <label class="text-[10px] text-gray-500 uppercase font-bold">3D Model URL (.glb)</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="modelUrl" placeholder="https://...model.glb" class="flex-1 p-3 rounded focus:outline-none focus:border-[#d4af37]">
+                            <button type="button" onclick="window.testModel()" class="bg-blue-600 text-white px-2 rounded text-[10px] uppercase font-bold">Test</button>
+                        </div>
+                        <p class="text-[9px] text-gray-500 mt-1 italic">Note: URL eka kelinma .glb file ekakata sambanda viya yuthuya.</p>
                     </div>
                     <button type="submit" id="submit-btn" class="w-full btn-gold py-3 rounded mt-4 uppercase shadow-lg shadow-yellow-900/20">Ekathu Karanna</button>
                 </form>
@@ -73,7 +86,6 @@
         import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-        // Firebase Configuration (මෙය ඔබේ Console එකේ තියෙන එකමදැයි නැවත බලන්න)
         const firebaseConfig = {
             apiKey: "AIzaSyBhR6spBqRutgGCqJ3bD-oDWXXZxiYPf0Q",
             authDomain: "kottu-d5c53.firebaseapp.com",
@@ -95,15 +107,14 @@
         const authStatus = document.getElementById('auth-status');
         const dbStatus = document.getElementById('db-status');
         const connDot = document.getElementById('conn-dot');
+        const errorGuide = document.getElementById('auth-error-guide');
 
-        // Connection status check
-        const connectedRef = ref(db, ".info/connected");
-        onValue(connectedRef, (snap) => {
+        onValue(ref(db, ".info/connected"), (snap) => {
             if (snap.val() === true) {
                 dbStatus.innerText = "DB: REALTIME CONNECTED";
                 connDot.classList.replace('bg-red-500', 'bg-green-500');
             } else {
-                dbStatus.innerText = "DB: DISCONNECTED / RECONNECTING";
+                dbStatus.innerText = "DB: DISCONNECTED";
                 connDot.classList.replace('bg-green-500', 'bg-red-500');
             }
         });
@@ -112,52 +123,41 @@
             if (user) {
                 authStatus.innerText = "AUTH: LOGGED IN";
                 authStatus.className = "text-xs text-green-500 font-mono";
+                errorGuide.classList.add('hidden');
                 loadMenuData();
             } else {
                 signInAnonymously(auth).catch(err => {
-                    authStatus.innerText = "AUTH: ERROR - " + err.code;
-                    authStatus.className = "text-xs text-red-500 font-mono";
-                    console.error("Auth Error:", err);
+                    authStatus.innerText = "AUTH: ERROR";
+                    if (err.code === 'auth/configuration-not-found') errorGuide.classList.remove('hidden');
                 });
             }
         });
 
         function loadMenuData() {
-            const menuPath = `artifacts/${appId}/public/data/menuItems`;
-            const menuRef = ref(db, menuPath);
-
-            onValue(menuRef, (snapshot) => {
+            onValue(ref(db, `artifacts/${appId}/public/data/menuItems`), (snapshot) => {
                 const data = snapshot.val();
                 listContainer.innerHTML = '';
-                
                 if (data) {
                     Object.keys(data).forEach(key => {
                         const item = data[key];
                         const itemDiv = document.createElement('div');
-                        itemDiv.className = "flex justify-between items-center p-4 bg-[#1f1f1f] border border-gray-800 rounded-lg hover:border-[#d4af37]/50 transition-colors group";
+                        itemDiv.className = "flex justify-between items-center p-4 bg-[#1f1f1f] border border-gray-800 rounded-lg hover:border-[#d4af37]/50 group";
                         itemDiv.innerHTML = `
-                            <div class="flex flex-col">
+                            <div class="flex flex-col flex-1 truncate">
                                 <span class="font-bold text-[#d4af37] tracking-wide text-lg">${item.name}</span>
-                                <div class="flex gap-3 mt-1 text-[10px] text-gray-400">
-                                    <span class="px-2 py-0.5 bg-black rounded font-semibold">${item.category}</span>
-                                    <span class="font-mono">Rs. ${parseFloat(item.price).toLocaleString()}</span>
+                                <div class="flex gap-2 mt-1 items-center">
+                                    <span class="text-[10px] px-2 py-0.5 bg-black rounded text-gray-400 uppercase">${item.category}</span>
+                                    <span class="text-xs text-white/80 font-mono">Rs. ${item.price}</span>
+                                    ${item.modelUrl ? '<span class="text-[9px] text-blue-400">● 3D AR</span>' : ''}
                                 </div>
                             </div>
-                            <button onclick="window.deleteItem('${key}')" class="bg-red-900/20 text-red-500 hover:bg-red-600 hover:text-white px-3 py-1 rounded text-[10px] font-bold uppercase transition-all">Makanna</button>
+                            <button onclick="window.deleteItem('${key}')" class="bg-red-900/20 text-red-500 hover:bg-red-600 hover:text-white px-3 py-2 rounded text-[10px] font-bold uppercase ml-2">Delete</button>
                         `;
                         listContainer.appendChild(itemDiv);
                     });
                 } else {
-                    listContainer.innerHTML = `
-                        <div class="flex flex-col items-center justify-center py-20 text-gray-500 border-2 border-dashed border-gray-800 rounded-lg">
-                            <p class="text-sm italic text-center">Menu eka hisi.<br>Ekak ekathu karala balanna.</p>
-                        </div>
-                    `;
+                    listContainer.innerHTML = `<p class="text-gray-500 text-center py-20 italic">Menu is empty.</p>`;
                 }
-            }, (error) => {
-                dbStatus.innerText = "DB: PERMISSION DENIED / RULES ERROR";
-                console.error("Firebase Error:", error);
-                listContainer.innerHTML = `<p class="text-center text-red-500 p-10 text-xs">ඔබේ Rules පරීක්ෂා කරන්න (Permission Denied).</p>`;
             });
         }
 
@@ -166,7 +166,6 @@
             const btn = document.getElementById('submit-btn');
             btn.disabled = true;
             btn.innerText = "Saving...";
-
             const newItem = {
                 name: document.getElementById('name').value,
                 price: document.getElementById('price').value,
@@ -174,32 +173,22 @@
                 modelUrl: document.getElementById('modelUrl').value || "",
                 createdAt: Date.now()
             };
-
             try {
-                const menuRef = ref(db, `artifacts/${appId}/public/data/menuItems`);
-                await push(menuRef, newItem);
+                await push(ref(db, `artifacts/${appId}/public/data/menuItems`), newItem);
                 form.reset();
-            } catch (err) {
-                alert("Data save කරන්න බැරි වුණා! Rules හෝ URL පරීක්ෂා කරන්න.");
-                console.error("Save Error:", err);
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "EKATHU KARANNA";
-            }
+            } catch (err) { alert("Error saving data!"); }
+            btn.disabled = false; btn.innerText = "EKATHU KARANNA";
+        };
+
+        window.testModel = () => {
+            const url = document.getElementById('modelUrl').value;
+            if(!url) return alert("Please enter a URL first!");
+            window.open(`https://modelviewer.dev/editor/index.html?src=${encodeURIComponent(url)}`, '_blank');
         };
 
         window.deleteItem = (id) => {
-            if (confirm("මෙනු එකෙන් මකන්නද?")) {
-                remove(ref(db, `artifacts/${appId}/public/data/menuItems/${id}`));
-            }
+            if (confirm("Delete this item?")) remove(ref(db, `artifacts/${appId}/public/data/menuItems/${id}`));
         };
     </script>
-
-    <style>
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #444; }
-    </style>
 </body>
 </html>
