@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>L'ARISTO | Interactive Table Menu</title>
+    <title>MR KOTTU | Interactive Table Menu</title>
     
     <!-- Libraries -->
     <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
@@ -30,14 +30,27 @@
 
         #loader {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: #111; display: flex; flex-direction: column; align-items: center; 
+            background: #000; display: flex; flex-direction: column; align-items: center; 
             justify-content: center; color: #d4af37; z-index: 1000;
+            transition: opacity 0.8s ease;
+        }
+
+        #loader img {
+            width: 150px; /* ලෝගෝ එකේ ප්‍රමාණය මෙතනින් වෙනස් කරන්න පුළුවන් */
+            height: auto;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.8; }
         }
         
         .spinner {
-            width: 50px; height: 50px; border: 3px solid rgba(212,175,55,0.1);
-            border-top: 3px solid #d4af37; border-radius: 50%; animation: spin 1s linear infinite;
-            margin-bottom: 20px;
+            width: 30px; height: 30px; border: 2px solid rgba(212,175,55,0.1);
+            border-top: 2px solid #d4af37; border-radius: 50%; animation: spin 1s linear infinite;
         }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
@@ -55,12 +68,14 @@
 <body>
 
     <div id="loader">
+        <img src="logo.png" alt="MR KOTTU LOGO" onerror="this.style.display='none'">
+        <h2 style="letter-spacing: 4px; margin-top: 0;">MR KOTTU</h2>
         <div class="spinner"></div>
-        <p style="letter-spacing: 2px;">L'ARISTO PREPARING...</p>
+        <p style="letter-spacing: 2px; font-size: 10px; margin-top: 20px; opacity: 0.6;">PREPARING YOUR EXPERIENCE...</p>
     </div>
 
     <div id="ui-overlay">
-        <div id="status-bar">L'ARISTO IMMERSIVE MENU</div>
+        <div id="status-bar">MR KOTTU IMMERSIVE MENU</div>
         
         <div id="instruction-overlay">
             <div class="swipe-hint"></div>
@@ -68,12 +83,6 @@
         </div>
     </div>
 
-    <!-- 
-        වැදගත් වෙනස්කම්:
-        - missTolerance: 100 -> පින්තූරය මඳක් ඉවතට ගියත් සෑහෙන වෙලාවක් 3D objects පෙන්වයි.
-        - warmUpTolerance: 5 -> හඳුනාගැනීම වේගවත් කරයි.
-        - filterMinCF: 0.0001 / filterBeta: 0.001 -> ගැස්සීම් (jitter) අවම කර ඉතා සුමටව පෙන්වයි.
-    -->
     <a-scene 
         mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiScanning: no; filterMinCF: 0.0001; filterBeta: 0.001; missTolerance: 100; warmUpTolerance: 5;" 
         color-space="sRGB" 
@@ -94,12 +103,7 @@
 
         <a-entity mindar-image-target="targetIndex: 0" id="target-anchor">
             
-            <!-- 
-                මෙම rotation අගය -90 සිට 0 දක්වා වෙනස් කිරීමෙන් පරිශීලකයාට 
-                කැමරාව ඇල කරගෙන බලන විට වඩාත් හොඳින් මෙනුව පෙනෙන ලෙස සකස් කළ හැක.
-            -->
             <a-entity rotation="90 0 0" id="menu-root-wrapper">
-                <!-- Group that will animate on swipe -->
                 <a-entity id="menu-slider" animation="property: position; dur: 800; easing: easeOutQuint">
                     
                     <!-- Item 0 -->
@@ -145,7 +149,7 @@
     <script>
         let currentItem = 0;
         const totalItems = 3;
-        const itemSpacing = 2.5; // සාපේක්ෂ දුර වැඩි කළා පටලැවිල්ල අඩු කිරීමට
+        const itemSpacing = 2.5; 
         
         let touchStartX = 0;
         let touchEndX = 0;
@@ -158,7 +162,6 @@
             slider.setAttribute('animation', `property: position; to: ${targetX} 0 0; dur: 800; easing: easeOutQuint`);
         }
 
-        // Touch handling
         window.addEventListener('touchstart', e => {
             touchStartX = e.changedTouches[0].screenX;
         }, {passive: true});
@@ -187,18 +190,17 @@
             const loader = document.getElementById('loader');
             const target = document.getElementById('target-anchor');
 
+            // ඇප් එක load වුණාම ලෝඩර් එක අයින් කරන්න
             setTimeout(() => { 
                 loader.style.opacity = '0'; 
-                setTimeout(() => loader.style.display = 'none', 500); 
-            }, 2000);
+                setTimeout(() => loader.style.display = 'none', 800); 
+            }, 3000);
 
             target.addEventListener('targetFound', () => {
                 instruction.style.visibility = 'visible';
-                console.log("Target found - stabilizing...");
             });
 
             target.addEventListener('targetLost', () => {
-                // Extended tracking - මෙනුව වහාම අතුරුදහන් වීම වැලැක්වීමට මෙය උපකාරී වේ
                 setTimeout(() => {
                     if (!target.getAttribute('mindar-image-target').isTargetFound) {
                         instruction.style.visibility = 'hidden';
