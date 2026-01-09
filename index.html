@@ -5,52 +5,76 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>L'ARISTO | Interactive Table Menu</title>
     
+    <!-- Libraries -->
     <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
 
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: #000; }
         
-        /* UI Buttons for Scrolling */
+        #ui-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between;
+        }
+
+        #status-bar {
+            background: rgba(0,0,0,0.7); color: #d4af37; padding: 15px; text-align: center; font-size: 14px;
+        }
+
         #menu-controls {
-            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-            display: flex; gap: 20px; z-index: 100; visibility: hidden;
+            display: flex; justify-content: center; gap: 20px; padding-bottom: 40px; pointer-events: auto;
+            visibility: hidden; /* Only show when target is found */
         }
         
         .nav-btn {
-            background: rgba(212, 175, 55, 0.9); border: none; padding: 15px 30px;
-            border-radius: 50px; color: black; font-weight: bold; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3); font-size: 18px;
+            background: #d4af37; border: none; padding: 15px 25px; border-radius: 30px;
+            color: #000; font-weight: bold; cursor: pointer; font-size: 16px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
 
         #loader {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; display: flex; align-items: center; justify-content: center;
-            color: #d4af37; z-index: 1000;
+            background: #111; display: flex; flex-direction: column; align-items: center; 
+            justify-content: center; color: #d4af37; z-index: 1000;
         }
+        
+        .spinner {
+            width: 40px; height: 40px; border: 4px solid rgba(212,175,55,0.2);
+            border-top: 4px solid #d4af37; border-radius: 50%; animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
     <div id="loader">
-        <h2>L'ARISTO Interactive Menu...</h2>
+        <div class="spinner"></div>
+        <p>L'ARISTO පද්ධතිය සූදානම් වේ...</p>
     </div>
 
-    <!-- Navigation UI -->
-    <div id="menu-controls">
-        <button class="nav-btn" onclick="prevItem()">මීට කලින්</button>
-        <button class="nav-btn" onclick="nextItem()">ඊළඟ එක</button>
+    <div id="ui-overlay">
+        <div id="status-bar">මෙනු පත (QR) ස්කෑන් කරන්න</div>
+        
+        <div id="menu-controls">
+            <button class="nav-btn" onclick="prevItem()">මීට කලින්</button>
+            <button class="nav-btn" onclick="nextItem()">ඊළඟ එක</button>
+        </div>
     </div>
 
+    <!-- 
+        වැදගත්: imageTargetSrc එක නිවැරදිව ./targets.mind ලෙස තිබිය යුතුයි. 
+        ඔබේ ගොනුව තිබෙන තැන අනුව මෙය වෙනස් කරන්න.
+    -->
     <a-scene 
-        mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.0001; filterBeta: 0.005;" 
+        mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiScanning: yes;" 
         color-space="sRGB" 
         renderer="colorManagement: true, physicallyCorrectLights: true"
         vr-mode-ui="enabled: false" 
         device-orientation-permission-ui="enabled: false">
         
         <a-assets>
-            <!-- ඔයාගේ GLB Models මෙතනට දාන්න. දැනට මම Boxes පාවිච්චි කරනවා -->
+            <!-- Models -->
             <a-asset-item id="risotto-m" src="risotto.glb"></a-asset-item>
             <a-asset-item id="scallops-m" src="scallops.glb"></a-asset-item>
             <a-asset-item id="lamb-m" src="lamb.glb"></a-asset-item>
@@ -59,89 +83,82 @@
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
         <a-light type="ambient" intensity="1"></a-light>
-        <a-light type="point" position="0 2 0" intensity="1.5"></a-light>
+        <a-light type="point" position="0 2 1" intensity="1.2"></a-light>
 
-        <!-- මෙනු එක මේසය මත (Target 0) -->
-        <a-entity mindar-image-target="targetIndex: 0" id="main-target">
+        <!-- Target Placement -->
+        <a-entity mindar-image-target="targetIndex: 0" id="target-anchor">
             
-            <!-- මුළු මෙනු පද්ධතියම අඩංගු Container එක -->
-            <a-entity rotation="90 0 0" id="menu-container">
-                
-                <!-- Item 1: Risotto -->
-                <a-entity id="item-0" visible="true">
-                    <a-box color="#d4af37" scale="0.3 0.3 0.3" 
-                        animation="property: rotation; to: 0 360 0; dur: 5000; loop: true; easing: linear">
-                    </a-box>
-                    <a-entity position="0 0.5 0">
-                        <a-text value="WILD MUSHROOM RISOTTO" align="center" color="#d4af37" width="3"></a-text>
-                        <a-text value="Rs. 2,450" align="center" color="#fff" width="2" position="0 -0.2 0"></a-text>
+            <a-entity rotation="90 0 0">
+                <!-- Wrapper to switch items -->
+                <a-entity id="item-carousel">
+                    
+                    <!-- Item 0 -->
+                    <a-entity id="item-0" visible="true">
+                        <a-box position="0 0.2 0" scale="0.3 0.3 0.3" color="#d4af37" animation="property: rotation; to: 0 360 0; loop: true; dur: 6000"></a-box>
+                        <a-text value="RISOTTO\nRs. 2,450" align="center" position="0 0.6 0" width="3" color="#d4af37"></a-text>
                     </a-entity>
-                </a-entity>
 
-                <!-- Item 2: Scallops -->
-                <a-entity id="item-1" visible="false">
-                    <a-box color="#ff4444" scale="0.3 0.3 0.3"
-                        animation="property: rotation; to: 0 360 0; dur: 5000; loop: true; easing: linear">
-                    </a-box>
-                    <a-entity position="0 0.5 0">
-                        <a-text value="PAN-SEARED SCALLOPS" align="center" color="#ff4444" width="3"></a-text>
-                        <a-text value="Rs. 3,100" align="center" color="#fff" width="2" position="0 -0.2 0"></a-text>
+                    <!-- Item 1 -->
+                    <a-entity id="item-1" visible="false">
+                        <a-box position="0 0.2 0" scale="0.3 0.3 0.3" color="#ff4444" animation="property: rotation; to: 0 360 0; loop: true; dur: 6000"></a-box>
+                        <a-text value="SCALLOPS\nRs. 3,100" align="center" position="0 0.6 0" width="3" color="#ff4444"></a-text>
                     </a-entity>
-                </a-entity>
 
-                <!-- Item 3: Lamb -->
-                <a-entity id="item-2" visible="false">
-                    <a-box color="#44ff44" scale="0.3 0.3 0.3"
-                        animation="property: rotation; to: 0 360 0; dur: 5000; loop: true; easing: linear">
-                    </a-box>
-                    <a-entity position="0 0.5 0">
-                        <a-text value="RACK OF LAMB" align="center" color="#44ff44" width="3"></a-text>
-                        <a-text value="Rs. 4,800" align="center" color="#fff" width="2" position="0 -0.2 0"></a-text>
+                    <!-- Item 2 -->
+                    <a-entity id="item-2" visible="false">
+                        <a-box position="0 0.2 0" scale="0.3 0.3 0.3" color="#44ff44" animation="property: rotation; to: 0 360 0; loop: true; dur: 6000"></a-box>
+                        <a-text value="LAMB CHOP\nRs. 4,800" align="center" position="0 0.6 0" width="3" color="#44ff44"></a-text>
                     </a-entity>
-                </a-entity>
 
+                </a-entity>
             </a-entity>
+            
         </a-entity>
 
     </a-scene>
 
     <script>
-        let currentIndex = 0;
+        let currentItem = 0;
         const totalItems = 3;
 
-        function showItem(index) {
-            for (let i = 0; i < totalItems; i++) {
-                document.getElementById(`item-${i}`).setAttribute('visible', i === index);
+        function updateDisplay() {
+            for(let i=0; i<totalItems; i++) {
+                document.getElementById(`item-${i}`).setAttribute('visible', i === currentItem);
             }
         }
 
         function nextItem() {
-            currentIndex = (currentIndex + 1) % totalItems;
-            showItem(currentIndex);
+            currentItem = (currentItem + 1) % totalItems;
+            updateDisplay();
         }
 
         function prevItem() {
-            currentIndex = (currentIndex - 1 + totalItems) % totalItems;
-            showItem(currentIndex);
+            currentItem = (currentItem - 1 + totalItems) % totalItems;
+            updateDisplay();
         }
 
-        window.onload = () => {
-            const target = document.getElementById('main-target');
+        window.addEventListener('load', () => {
+            const loader = document.getElementById('loader');
+            const target = document.getElementById('target-anchor');
             const controls = document.getElementById('menu-controls');
-            
-            // Target එක හම්බුනාම විතරක් බොත්තම් පෙන්වන්න
+            const status = document.getElementById('status-bar');
+
+            // Hide loader
+            setTimeout(() => { loader.style.display = 'none'; }, 2000);
+
+            // Handle Target Events
             target.addEventListener('targetFound', () => {
                 controls.style.visibility = 'visible';
-            });
-            
-            target.addEventListener('targetLost', () => {
-                controls.style.visibility = 'hidden';
+                status.innerText = "ආහාර මෙනුව සක්‍රීයයි";
+                status.style.color = "#44ff44";
             });
 
-            setTimeout(() => {
-                document.getElementById('loader').style.display = 'none';
-            }, 2000);
-        };
+            target.addEventListener('targetLost', () => {
+                controls.style.visibility = 'hidden';
+                status.innerText = "මෙනු පත (QR) සොයමින් පවතී...";
+                status.style.color = "#d4af37";
+            });
+        });
     </script>
 </body>
 </html>
