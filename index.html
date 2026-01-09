@@ -68,8 +68,13 @@
         </div>
     </div>
 
+    <!-- 
+        uiScanning: no -> scanning සලකුණ ඉවත් කරන ලදී
+        filterMinCF: 0.0001, filterBeta: 0.001 -> ට්‍රැකින් වේගය සහ සුමට බව වැඩි කරන ලදී
+        missTolerance: 10 -> ටාගට් එක මදක් මගහැරුණත් පෙනී සිටීමේ හැකියාව වැඩි කරන ලදී
+    -->
     <a-scene 
-        mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiScanning: yes;" 
+        mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiScanning: no; filterMinCF: 0.0001; filterBeta: 0.001; missTolerance: 10;" 
         color-space="sRGB" 
         renderer="colorManagement: true, physicallyCorrectLights: true"
         vr-mode-ui="enabled: false" 
