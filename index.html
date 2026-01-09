@@ -43,8 +43,9 @@
         <p id="instruction">ස්කෑන් කරන්න: මෙනු පත ස්කෑන් කර ආහාර නරඹන්න</p>
     </div>
 
+    <!-- missTolerance: 10000 මඟින් පින්තූරය නොපෙනී ගියත් තත්පර 10ක් යනතුරු එය අතුරුදහන් නොවේ -->
     <a-scene 
-        mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.0001; filterBeta: 0.005;" 
+        mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.0001; filterBeta: 0.005; missTolerance: 10000; warmupTolerance: 5;" 
         color-space="sRGB" 
         renderer="colorManagement: true, physicallyCorrectLights: true, antialias: true, exposure: 1.2;" 
         vr-mode-ui="enabled: false" 
@@ -63,17 +64,14 @@
         <a-light type="ambient" color="#fff" intensity="1.5"></a-light>
         <a-light type="directional" color="#ffd1dc" intensity="1.2" position="1 4 3"></a-light>
 
-        <!-- ස්වයංක්‍රීයව පියාඹන කුරුල්ලන් සහ සමනලුන් (Ambient AI) -->
-        <!-- මෙම කොටස කිසිදු Target එකකට සම්බන්ධ නැති නිසා හැමවිටම පෙනේ -->
+        <!-- ස්වයංක්‍රීයව පියාඹන කුරුල්ලන් සහ සමනලුන් -->
         <a-entity id="ambient-life">
-            <!-- පියාඹන කුරුල්ලා -->
             <a-entity position="0 2 -5" animation="property: position; to: 2 3 -10; dur: 15000; easing: linear; loop: true; dir: alternate">
                 <a-gltf-model src="#bird-m" scale="0.1 0.1 0.1" animation-mixer
                     animation="property: rotation; to: 0 360 0; dur: 10000; easing: linear; loop: true">
                 </a-gltf-model>
             </a-entity>
 
-            <!-- කැරකෙන සමනලයා -->
             <a-entity position="-2 1.5 -4" animation="property: position; to: 2 2 -6; dur: 12000; easing: easeInOutSine; loop: true; dir: alternate">
                 <a-gltf-model src="#butterfly-m" scale="0.05 0.05 0.05" animation-mixer
                     animation="property: rotation; to: 0 360 30; dur: 8000; easing: linear; loop: true">
@@ -168,10 +166,7 @@
                         instruction.innerHTML = `L'ARISTO: ${t.name} සූදානම්`;
                         instruction.style.color = "#d4af37";
                     });
-                    el.addEventListener('targetLost', () => {
-                        instruction.innerHTML = "ස්කෑන් කරන්න: මෙනු පත ස්කෑන් කර ආහාර නරඹන්න";
-                        instruction.style.color = "white";
-                    });
+                    // Target Lost වූ විට වහාම Instruction එක වෙනස් නොකර තබා ගනී
                 }
             });
         };
