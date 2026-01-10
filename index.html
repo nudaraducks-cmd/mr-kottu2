@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>MR KOTTU | AR Experience</title>
     
-    <!-- Libraries -->
     <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
@@ -14,14 +13,11 @@
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: #000; touch-action: none; }
         #ui-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; }
         #status-bar { background: rgba(0,0,0,0.85); color: #d4af37; padding: 15px; text-align: center; font-size: 14px; letter-spacing: 2px; border-bottom: 1px solid rgba(212,175,55,0.3); font-weight: bold; }
-        
-        #scanning-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #d4af37; text-align: center; pointer-events: none; z-index: 5; }
+        #scanning-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #d4af37; text-align: center; z-index: 5; }
         #loader { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #d4af37; z-index: 1000; transition: opacity 0.8s ease; }
-        
         .spinner { width: 40px; height: 40px; border: 3px solid rgba(212,175,55,0.1); border-top: 3px solid #d4af37; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
-        
-        #swipe-hint { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.6; pointer-events: none; }
+        #swipe-hint { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.6; }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -30,12 +26,11 @@
     <div id="loader">
         <h2 style="letter-spacing: 4px; margin-bottom: 20px;">MR KOTTU</h2>
         <div class="spinner"></div>
-        <p style="letter-spacing: 2px; font-size: 10px; margin-top: 20px; opacity: 0.6;">Kaama List Eka Load Vemin...</p>
     </div>
 
     <div id="scanning-overlay" class="hidden">
         <div class="spinner" style="margin: 0 auto 15px auto;"></div>
-        <p style="font-size: 12px; letter-spacing: 1px;">Target Image Eka Scan Karanna...</p>
+        <p style="font-size: 12px;">Scan Target Image...</p>
     </div>
 
     <div id="ui-overlay">
@@ -52,11 +47,10 @@
         
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
         <a-light type="ambient" intensity="1.2"></a-light>
-        <a-light type="directional" position="0 10 5" intensity="0.8"></a-light>
 
         <a-entity mindar-image-target="targetIndex: 0" id="target-anchor">
             <a-entity id="menu-slider" position="0 0 0" animation="property: position; dur: 600; easing: easeOutQuad">
-                <!-- Items injected here -->
+                <!-- Items injected here via JS -->
             </a-entity>
         </a-entity>
     </a-scene>
@@ -86,14 +80,6 @@
         let currentIndex = 0;
         const itemSpacing = 2.5;
 
-        const slider = document.getElementById('menu-slider');
-        const loader = document.getElementById('loader');
-        const scanningOverlay = document.getElementById('scanning-overlay');
-        const swipeHint = document.getElementById('swipe-hint');
-
-        let touchStartX = 0;
-        let touchEndX = 0;
-
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 onValue(ref(db, `artifacts/${appId}/public/data/menuItems`), (snapshot) => {
@@ -102,85 +88,86 @@
                         menuItems = Object.keys(data).map(key => ({ id: key, ...data[key] }));
                         renderMenu();
                     }
-                    loader.style.opacity = '0';
-                    setTimeout(() => { loader.style.display = 'none'; scanningOverlay.classList.remove('hidden'); }, 800);
+                    document.getElementById('loader').style.display = 'none';
+                    document.getElementById('scanning-overlay').classList.remove('hidden');
                 });
             } else { signInAnonymously(auth); }
         });
 
-        function getDirectUrl(url) {
-            if (!url) return "";
-            if (url.includes("dropbox.com")) {
-                return url.replace("?dl=0", "?raw=1").replace("www.dropbox.com", "dl.dropboxusercontent.com");
-            }
-            return url;
-        }
-
         function renderMenu() {
+            const slider = document.getElementById('menu-slider');
             slider.innerHTML = '';
+            
             menuItems.forEach((item, index) => {
-                const entity = document.createElement('a-entity');
-                entity.setAttribute('position', `${index * itemSpacing} 0 0.2`);
+                const itemWrapper = document.createElement('a-entity');
+                itemWrapper.setAttribute('position', `${index * itemSpacing} 0 0.2`);
                 
-                const finalUrl = getDirectUrl(item.modelUrl);
-                
-                // Admin Settings (Scale, RotationX, RotationY, PositionY)
+                const url = item.modelUrl?.replace("?dl=0", "?raw=1").replace("www.dropbox.com", "dl.dropboxusercontent.com");
                 const s = item.scale || 0.15;
                 const rX = item.rotX !== undefined ? item.rotX : 90;
                 const rY = item.rotY !== undefined ? item.rotY : 0;
+                const rZ = item.rotZ !== undefined ? item.rotZ : 0;
                 const pY = item.posY !== undefined ? item.posY : 0;
-                
-                const modelHtml = finalUrl 
-                    ? `<a-entity gltf-model="${finalUrl}" 
-                                 scale="${s} ${s} ${s}" 
-                                 rotation="${rX} ${rY} 0" 
-                                 position="0 ${pY} 0" 
-                                 animation="property: rotation; from: ${rX} ${rY} 0; to: ${rX} ${rY + 360} 0; loop: true; dur: 12000; easing: linear">
-                       </a-entity>`
-                    : `<a-box position="0 ${pY} 0" scale="0.3 0.3 0.3" color="#d4af37"></a-box>`;
 
-                entity.innerHTML = `
-                    ${modelHtml}
-                    <a-entity position="0 0.6 0">
-                        <a-text value="${item.name.toUpperCase()}" align="center" width="2.5" color="#d4af37" font="aileron" bold="true"></a-text>
-                        <a-text value="Rs. ${item.price}" align="center" width="2" color="#fff" position="0 -0.2 0"></a-text>
-                    </a-entity>
+                const autoX = !!item.rotX_auto;
+                const autoY = item.rotY_auto !== undefined ? item.rotY_auto : true;
+                const autoZ = !!item.rotZ_auto;
+
+                // Create nested structure for independent rotations
+                const xWrap = document.createElement('a-entity');
+                xWrap.setAttribute('rotation', `${rX} 0 0`);
+                if(autoX) xWrap.setAttribute('animation', `property: rotation; from: ${rX} 0 0; to: ${rX+360} 0 0; loop: true; dur: 12000; easing: linear`);
+
+                const yWrap = document.createElement('a-entity');
+                yWrap.setAttribute('rotation', `0 ${rY} 0`);
+                if(autoY) yWrap.setAttribute('animation', `property: rotation; from: 0 ${rY} 0; to: 0 ${rY+360} 0; loop: true; dur: 12000; easing: linear`);
+
+                const zWrap = document.createElement('a-entity');
+                zWrap.setAttribute('rotation', `0 0 ${rZ}`);
+                if(autoZ) zWrap.setAttribute('animation', `property: rotation; from: 0 0 ${rZ}; to: 0 0 ${rZ+360}; loop: true; dur: 12000; easing: linear`);
+
+                const model = document.createElement('a-entity');
+                model.setAttribute('gltf-model', url);
+                model.setAttribute('scale', `${s} ${s} ${s}`);
+                model.setAttribute('position', `0 ${pY} 0`);
+
+                // Nest them: xWrap > yWrap > zWrap > model
+                zWrap.appendChild(model);
+                yWrap.appendChild(zWrap);
+                xWrap.appendChild(yWrap);
+                itemWrapper.appendChild(xWrap);
+
+                // Add Text
+                const textEntity = document.createElement('a-entity');
+                textEntity.setAttribute('position', '0 0.6 0');
+                textEntity.innerHTML = `
+                    <a-text value="${item.name.toUpperCase()}" align="center" width="2.5" color="#d4af37"></a-text>
+                    <a-text value="Rs. ${item.price}" align="center" width="2" color="#fff" position="0 -0.2 0"></a-text>
                 `;
-                slider.appendChild(entity);
+                itemWrapper.appendChild(textEntity);
+
+                slider.appendChild(itemWrapper);
             });
         }
 
-        // Swipe Logic
-        document.addEventListener('touchstart', e => {
-            touchStartX = e.changedTouches[0].screenX;
-        }, false);
-
+        let startX = 0;
+        document.addEventListener('touchstart', e => startX = e.touches[0].clientX);
         document.addEventListener('touchend', e => {
-            touchEndX = e.changedTouches[0].screenX;
-            handleSwipe();
-        }, false);
-
-        function handleSwipe() {
-            const swipeThreshold = 50;
-            if (touchEndX < touchStartX - swipeThreshold) moveMenu(1);
-            if (touchEndX > touchStartX + swipeThreshold) moveMenu(-1);
-        }
-
-        function moveMenu(direction) {
-            currentIndex += direction;
-            if (currentIndex < 0) currentIndex = 0;
-            if (currentIndex >= menuItems.length) currentIndex = menuItems.length - 1;
-            slider.setAttribute('animation', `property: position; to: ${-currentIndex * itemSpacing} 0 0; dur: 600; easing: easeOutQuad`);
-        }
-
-        const sceneEl = document.querySelector('a-scene');
-        sceneEl.addEventListener('targetFound', () => { 
-            scanningOverlay.classList.add('hidden'); 
-            swipeHint.classList.remove('hidden'); 
+            const diff = startX - e.changedTouches[0].clientX;
+            if (Math.abs(diff) > 50) {
+                currentIndex = Math.max(0, Math.min(menuItems.length - 1, currentIndex + (diff > 0 ? 1 : -1)));
+                document.getElementById('menu-slider').setAttribute('animation', `property: position; to: ${-currentIndex * itemSpacing} 0 0; dur: 600`);
+            }
         });
-        sceneEl.addEventListener('targetLost', () => { 
-            scanningOverlay.classList.remove('hidden'); 
-            swipeHint.classList.add('hidden'); 
+
+        const scene = document.querySelector('a-scene');
+        scene.addEventListener('targetFound', () => { 
+            document.getElementById('scanning-overlay').classList.add('hidden'); 
+            document.getElementById('swipe-hint').classList.remove('hidden'); 
+        });
+        scene.addEventListener('targetLost', () => { 
+            document.getElementById('scanning-overlay').classList.remove('hidden'); 
+            document.getElementById('swipe-hint').classList.add('hidden'); 
         });
     </script>
 </body>
