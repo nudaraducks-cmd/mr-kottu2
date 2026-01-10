@@ -80,7 +80,6 @@
                             <input type="range" id="scale" min="0.01" max="1" step="0.01" value="0.15" class="w-full accent-[#d4af37]">
                         </div>
 
-                        <!-- Axis Controls -->
                         <div class="space-y-4">
                             <!-- X Axis -->
                             <div class="grid grid-cols-1 gap-1">
@@ -134,9 +133,19 @@
                     <video id="webcam" autoplay playsinline></video>
                     <a-scene embedded vr-mode-ui="enabled: false" renderer="alpha: true; colorManagement: true;">
                         <a-light type="ambient" intensity="1.5"></a-light>
+                        
+                        <!-- Preview Anchor -->
                         <a-entity id="preview-anchor" position="0 0 -3">
-                            <a-entity id="preview-model" gltf-model="" scale="0.15 0.15 0.15" rotation="90 0 0"></a-entity>
+                            <!-- Nested entities for independent axis rotation -->
+                            <a-entity id="rot-x-wrapper">
+                                <a-entity id="rot-y-wrapper">
+                                    <a-entity id="rot-z-wrapper">
+                                        <a-entity id="preview-model" gltf-model="" scale="0.15 0.15 0.15"></a-entity>
+                                    </a-entity>
+                                </a-entity>
+                            </a-entity>
                         </a-entity>
+                        
                         <a-camera look-controls="enabled: false" position="0 0 0"></a-camera>
                     </a-scene>
                 </div>
@@ -168,6 +177,9 @@
 
         const pModel = document.getElementById('preview-model');
         const pAnchor = document.getElementById('preview-anchor');
+        const wrapX = document.getElementById('rot-x-wrapper');
+        const wrapY = document.getElementById('rot-y-wrapper');
+        const wrapZ = document.getElementById('rot-z-wrapper');
 
         async function setupCamera() {
             const video = document.getElementById('webcam');
@@ -190,16 +202,21 @@
 
             if(url) pModel.setAttribute('gltf-model', url.replace("?dl=0", "?raw=1").replace("www.dropbox.com", "dl.dropboxusercontent.com"));
             pModel.setAttribute('scale', `${s} ${s} ${s}`);
-            pModel.setAttribute('rotation', `${rX} ${rY} ${rZ}`);
             pAnchor.setAttribute('position', `0 ${pY} -3`);
             
-            pModel.removeAttribute('animation');
-            if(autoX || autoY || autoZ) {
-                const toX = autoX ? rX + 360 : rX;
-                const toY = autoY ? rY + 360 : rY;
-                const toZ = autoZ ? rZ + 360 : rZ;
-                pModel.setAttribute('animation', `property: rotation; from: ${rX} ${rY} ${rZ}; to: ${toX} ${toY} ${toZ}; loop: true; dur: 12000; easing: linear`);
-            }
+            // Set base rotations
+            wrapX.setAttribute('rotation', `${rX} 0 0`);
+            wrapY.setAttribute('rotation', `0 ${rY} 0`);
+            wrapZ.setAttribute('rotation', `0 0 ${rZ}`);
+            
+            // Apply animations independently
+            wrapX.removeAttribute('animation');
+            wrapY.removeAttribute('animation');
+            wrapZ.removeAttribute('animation');
+
+            if(autoX) wrapX.setAttribute('animation', `property: rotation; from: ${rX} 0 0; to: ${rX+360} 0 0; loop: true; dur: 12000; easing: linear`);
+            if(autoY) wrapY.setAttribute('animation', `property: rotation; from: 0 ${rY} 0; to: 0 ${rY+360} 0; loop: true; dur: 12000; easing: linear`);
+            if(autoZ) wrapZ.setAttribute('animation', `property: rotation; from: 0 0 ${rZ}; to: 0 0 ${rZ+360} ; loop: true; dur: 12000; easing: linear`);
             
             document.getElementById('v-scale').innerText = s;
             document.getElementById('v-posY').innerText = pY;
