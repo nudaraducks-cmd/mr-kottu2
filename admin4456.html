@@ -77,7 +77,6 @@
                         
                         <div>
                             <div class="flex justify-between"><label class="control-label">Scale</label><span id="v-scale" class="text-xs text-[#d4af37]">0.15</span></div>
-                            <!-- Scale උපරිමය 3 දක්වා වැඩි කළා -->
                             <input type="range" id="scale" min="0.01" max="3" step="0.01" value="0.15" class="w-full accent-[#d4af37]">
                         </div>
 
@@ -119,8 +118,20 @@
                             </div>
                         </div>
 
+                        <!-- Centering Offsets -->
+                        <div class="grid grid-cols-2 gap-2 border-t border-gray-800 pt-2">
+                            <div>
+                                <label class="control-label">Center X</label>
+                                <input type="range" id="offsetX" min="-2" max="2" step="0.01" value="0" class="w-full accent-[#d4af37]">
+                            </div>
+                            <div>
+                                <label class="control-label">Center Z</label>
+                                <input type="range" id="offsetZ" min="-2" max="2" step="0.01" value="0" class="w-full accent-[#d4af37]">
+                            </div>
+                        </div>
+
                         <div>
-                            <div class="flex justify-between"><label class="control-label">Height Offset</label><span id="v-posY" class="text-xs text-[#d4af37]">0</span></div>
+                            <div class="flex justify-between"><label class="control-label">Height Offset (Y)</label><span id="v-posY" class="text-xs text-[#d4af37]">0</span></div>
                             <input type="range" id="posY" min="-5" max="5" step="0.1" value="0" class="w-full accent-[#d4af37]">
                         </div>
                     </div>
@@ -135,13 +146,14 @@
                     <a-scene embedded vr-mode-ui="enabled: false" renderer="alpha: true; colorManagement: true;">
                         <a-light type="ambient" intensity="1.5"></a-light>
                         
-                        <!-- Preview Anchor -->
                         <a-entity id="preview-anchor" position="0 0 -3">
-                            <!-- Nested entities for independent axis rotation -->
                             <a-entity id="rot-x-wrapper">
                                 <a-entity id="rot-y-wrapper">
                                     <a-entity id="rot-z-wrapper">
-                                        <a-entity id="preview-model" gltf-model="" scale="0.15 0.15 0.15"></a-entity>
+                                        <!-- Pivot inner wrapper to fix rotation point -->
+                                        <a-entity id="pivot-inner">
+                                            <a-entity id="preview-model" gltf-model="" scale="0.15 0.15 0.15"></a-entity>
+                                        </a-entity>
                                     </a-entity>
                                 </a-entity>
                             </a-entity>
@@ -178,6 +190,7 @@
 
         const pModel = document.getElementById('preview-model');
         const pAnchor = document.getElementById('preview-anchor');
+        const pivotInner = document.getElementById('pivot-inner');
         const wrapX = document.getElementById('rot-x-wrapper');
         const wrapY = document.getElementById('rot-y-wrapper');
         const wrapZ = document.getElementById('rot-z-wrapper');
@@ -196,6 +209,8 @@
             const rY = parseInt(document.getElementById('rotY').value);
             const rZ = parseInt(document.getElementById('rotZ').value);
             const pY = document.getElementById('posY').value;
+            const offX = document.getElementById('offsetX').value;
+            const offZ = document.getElementById('offsetZ').value;
             
             const autoX = document.getElementById('rotX_auto').checked;
             const autoY = document.getElementById('rotY_auto').checked;
@@ -203,14 +218,15 @@
 
             if(url) pModel.setAttribute('gltf-model', url.replace("?dl=0", "?raw=1").replace("www.dropbox.com", "dl.dropboxusercontent.com"));
             pModel.setAttribute('scale', `${s} ${s} ${s}`);
+            
+            // Apply centering offset to pivot inner
+            pivotInner.setAttribute('position', `${offX} 0 ${offZ}`);
             pAnchor.setAttribute('position', `0 ${pY} -3`);
             
-            // Set base rotations
             wrapX.setAttribute('rotation', `${rX} 0 0`);
             wrapY.setAttribute('rotation', `0 ${rY} 0`);
             wrapZ.setAttribute('rotation', `0 0 ${rZ}`);
             
-            // Apply animations independently
             wrapX.removeAttribute('animation');
             wrapY.removeAttribute('animation');
             wrapZ.removeAttribute('animation');
@@ -223,7 +239,7 @@
             document.getElementById('v-posY').innerText = pY;
         }
 
-        ['scale', 'rotX', 'rotY', 'rotZ', 'posY', 'modelUrl', 'rotX_auto', 'rotY_auto', 'rotZ_auto'].forEach(id => {
+        ['scale', 'rotX', 'rotY', 'rotZ', 'posY', 'modelUrl', 'rotX_auto', 'rotY_auto', 'rotZ_auto', 'offsetX', 'offsetZ'].forEach(id => {
             document.getElementById(id).addEventListener('input', syncPreview);
         });
 
@@ -260,6 +276,8 @@
             document.getElementById('rotY').value = item.rotY || 0;
             document.getElementById('rotZ').value = item.rotZ || 0;
             document.getElementById('posY').value = item.posY || 0;
+            document.getElementById('offsetX').value = item.offsetX || 0;
+            document.getElementById('offsetZ').value = item.offsetZ || 0;
             document.getElementById('rotX_auto').checked = !!item.rotX_auto;
             document.getElementById('rotY_auto').checked = item.rotY_auto !== undefined ? item.rotY_auto : true;
             document.getElementById('rotZ_auto').checked = !!item.rotZ_auto;
@@ -280,7 +298,9 @@
                 rotX_auto: document.getElementById('rotX_auto').checked,
                 rotY_auto: document.getElementById('rotY_auto').checked,
                 rotZ_auto: document.getElementById('rotZ_auto').checked,
-                posY: parseFloat(document.getElementById('posY').value)
+                posY: parseFloat(document.getElementById('posY').value),
+                offsetX: parseFloat(document.getElementById('offsetX').value),
+                offsetZ: parseFloat(document.getElementById('offsetZ').value)
             };
             if(id) await update(ref(db, `artifacts/${appId}/public/data/menuItems/${id}`), data);
             else await push(ref(db, `artifacts/${appId}/public/data/menuItems`), data);
