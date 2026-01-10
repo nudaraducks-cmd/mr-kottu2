@@ -91,7 +91,6 @@
         const scanningOverlay = document.getElementById('scanning-overlay');
         const swipeHint = document.getElementById('swipe-hint');
 
-        // Touch Variables
         let touchStartX = 0;
         let touchEndX = 0;
 
@@ -124,12 +123,20 @@
                 entity.setAttribute('position', `${index * itemSpacing} 0 0.2`);
                 
                 const finalUrl = getDirectUrl(item.modelUrl);
+                
+                // Admin Settings (Scale, RotationX, PositionY)
                 const s = item.scale || 0.15;
-                const rX = item.rotX || 90;
+                const rX = item.rotX !== undefined ? item.rotX : 90;
+                const pY = item.posY !== undefined ? item.posY : 0;
                 
                 const modelHtml = finalUrl 
-                    ? `<a-entity gltf-model="${finalUrl}" scale="${s} ${s} ${s}" rotation="${rX} 0 0" position="0 0 0" animation="property: rotation; from: ${rX} 0 0; to: ${rX} 360 0; loop: true; dur: 12000; easing: linear"></a-entity>`
-                    : `<a-box position="0 0 0" scale="0.3 0.3 0.3" color="#d4af37"></a-box>`;
+                    ? `<a-entity gltf-model="${finalUrl}" 
+                                 scale="${s} ${s} ${s}" 
+                                 rotation="${rX} 0 0" 
+                                 position="0 ${pY} 0" 
+                                 animation="property: rotation; from: ${rX} 0 0; to: ${rX} 360 0; loop: true; dur: 12000; easing: linear">
+                       </a-entity>`
+                    : `<a-box position="0 ${pY} 0" scale="0.3 0.3 0.3" color="#d4af37"></a-box>`;
 
                 entity.innerHTML = `
                     ${modelHtml}
@@ -154,12 +161,8 @@
 
         function handleSwipe() {
             const swipeThreshold = 50;
-            if (touchEndX < touchStartX - swipeThreshold) {
-                moveMenu(1); // Swipe Left -> Next
-            }
-            if (touchEndX > touchStartX + swipeThreshold) {
-                moveMenu(-1); // Swipe Right -> Prev
-            }
+            if (touchEndX < touchStartX - swipeThreshold) moveMenu(1);
+            if (touchEndX > touchStartX + swipeThreshold) moveMenu(-1);
         }
 
         function moveMenu(direction) {
