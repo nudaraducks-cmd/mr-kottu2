@@ -85,14 +85,18 @@
                             <input type="range" id="scale" min="0.01" max="1" step="0.01" value="0.15" class="w-full accent-[#d4af37]">
                         </div>
 
-                        <div class="grid grid-cols-2 gap-4">
+                        <div class="grid grid-cols-3 gap-2">
                             <div>
-                                <div class="flex justify-between"><label class="control-label">Tilt (X-Rot)</label><span id="v-rotX" class="text-xs text-[#d4af37]">90</span></div>
+                                <div class="flex flex-col"><label class="control-label">Tilt X</label><span id="v-rotX" class="text-[9px] text-[#d4af37]">90°</span></div>
                                 <input type="range" id="rotX" min="0" max="360" step="1" value="90" class="w-full accent-[#d4af37]">
                             </div>
                             <div>
-                                <div class="flex justify-between"><label class="control-label">Turn (Y-Rot)</label><span id="v-rotY" class="text-xs text-[#d4af37]">0</span></div>
+                                <div class="flex flex-col"><label class="control-label">Turn Y</label><span id="v-rotY" class="text-[9px] text-[#d4af37]">0°</span></div>
                                 <input type="range" id="rotY" min="0" max="360" step="1" value="0" class="w-full accent-[#d4af37]">
+                            </div>
+                            <div>
+                                <div class="flex flex-col"><label class="control-label">Roll Z</label><span id="v-rotZ" class="text-[9px] text-[#d4af37]">0°</span></div>
+                                <input type="range" id="rotZ" min="0" max="360" step="1" value="0" class="w-full accent-[#d4af37]">
                             </div>
                         </div>
 
@@ -177,21 +181,23 @@
             const s = document.getElementById('scale').value;
             const rX = parseInt(document.getElementById('rotX').value);
             const rY = parseInt(document.getElementById('rotY').value);
+            const rZ = parseInt(document.getElementById('rotZ').value);
             const pY = document.getElementById('posY').value;
 
             if(url) pModel.setAttribute('gltf-model', url);
             pModel.setAttribute('scale', `${s} ${s} ${s}`);
             
-            pModel.setAttribute('animation', `property: rotation; from: ${rX} ${rY} 0; to: ${rX} ${rY + 360} 0; loop: true; dur: 12000; easing: linear`);
+            pModel.setAttribute('animation', `property: rotation; from: ${rX} ${rY} ${rZ}; to: ${rX} ${rY + 360} ${rZ}; loop: true; dur: 12000; easing: linear`);
             pAnchor.setAttribute('position', `0 ${pY} -3`);
 
             document.getElementById('v-scale').innerText = s;
             document.getElementById('v-rotX').innerText = rX + "°";
             document.getElementById('v-rotY').innerText = rY + "°";
+            document.getElementById('v-rotZ').innerText = rZ + "°";
             document.getElementById('v-posY').innerText = pY;
         }
 
-        ['scale', 'rotX', 'rotY', 'posY', 'modelUrl'].forEach(id => {
+        ['scale', 'rotX', 'rotY', 'rotZ', 'posY', 'modelUrl'].forEach(id => {
             document.getElementById(id).addEventListener('input', syncPreview);
         });
 
@@ -230,6 +236,7 @@
             document.getElementById('scale').value = item.scale || 0.15;
             document.getElementById('rotX').value = item.rotX || 90;
             document.getElementById('rotY').value = item.rotY || 0;
+            document.getElementById('rotZ').value = item.rotZ || 0;
             document.getElementById('posY').value = item.posY || 0;
             syncPreview();
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -246,6 +253,7 @@
                 scale: parseFloat(document.getElementById('scale').value),
                 rotX: parseInt(document.getElementById('rotX').value),
                 rotY: parseInt(document.getElementById('rotY').value),
+                rotZ: parseInt(document.getElementById('rotZ').value || 0),
                 posY: parseFloat(document.getElementById('posY').value)
             };
             if(id) await update(ref(db, `artifacts/${appId}/public/data/menuItems/${id}`), data);
