@@ -47,6 +47,7 @@
         
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
         <a-light type="ambient" intensity="1.2"></a-light>
+        <a-light type="directional" position="1 2 1" intensity="0.8"></a-light>
 
         <a-entity mindar-image-target="targetIndex: 0" id="target-anchor">
             <a-entity id="menu-slider" position="0 0 0" animation="property: position; dur: 600; easing: easeOutQuad">
@@ -78,7 +79,7 @@
 
         let menuItems = [];
         let currentIndex = 0;
-        const itemSpacing = 2.5;
+        const itemSpacing = 3; // Increased spacing for better clarity
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
@@ -100,49 +101,64 @@
             
             menuItems.forEach((item, index) => {
                 const itemWrapper = document.createElement('a-entity');
-                itemWrapper.setAttribute('position', `${index * itemSpacing} 0 0.2`);
+                // Apply horizontal slider positioning
+                itemWrapper.setAttribute('position', `${index * itemSpacing} 0 0`);
                 
                 const url = item.modelUrl?.replace("?dl=0", "?raw=1").replace("www.dropbox.com", "dl.dropboxusercontent.com");
                 const s = item.scale || 0.15;
-                const rX = item.rotX !== undefined ? item.rotX : 90;
+                const rX = item.rotX !== undefined ? item.rotX : 45;
                 const rY = item.rotY !== undefined ? item.rotY : 0;
                 const rZ = item.rotZ !== undefined ? item.rotZ : 0;
                 const pY = item.posY !== undefined ? item.posY : 0;
+                const offX = item.offsetX !== undefined ? item.offsetX : 0;
+                const offZ = item.offsetZ !== undefined ? item.offsetZ : 0;
 
                 const autoX = !!item.rotX_auto;
                 const autoY = item.rotY_auto !== undefined ? item.rotY_auto : true;
                 const autoZ = !!item.rotZ_auto;
 
-                // Create nested structure for independent rotations
+                // 1. Height & Sliding Anchor
+                const anchorEntity = document.createElement('a-entity');
+                anchorEntity.setAttribute('position', `0 ${pY} 0`);
+
+                // 2. X-Rotation (Tilt)
                 const xWrap = document.createElement('a-entity');
                 xWrap.setAttribute('rotation', `${rX} 0 0`);
-                if(autoX) xWrap.setAttribute('animation', `property: rotation; from: ${rX} 0 0; to: ${rX+360} 0 0; loop: true; dur: 12000; easing: linear`);
+                if(autoX) xWrap.setAttribute('animation', `property: rotation; from: ${rX} 0 0; to: ${rX+360} 0 0; loop: true; dur: 15000; easing: linear`);
 
+                // 3. Y-Rotation (Turn)
                 const yWrap = document.createElement('a-entity');
                 yWrap.setAttribute('rotation', `0 ${rY} 0`);
-                if(autoY) yWrap.setAttribute('animation', `property: rotation; from: 0 ${rY} 0; to: 0 ${rY+360} 0; loop: true; dur: 12000; easing: linear`);
+                if(autoY) yWrap.setAttribute('animation', `property: rotation; from: 0 ${rY} 0; to: 0 ${rY+360} 0; loop: true; dur: 15000; easing: linear`);
 
+                // 4. Z-Rotation (Roll)
                 const zWrap = document.createElement('a-entity');
                 zWrap.setAttribute('rotation', `0 0 ${rZ}`);
-                if(autoZ) zWrap.setAttribute('animation', `property: rotation; from: 0 0 ${rZ}; to: 0 0 ${rZ+360}; loop: true; dur: 12000; easing: linear`);
+                if(autoZ) zWrap.setAttribute('animation', `property: rotation; from: 0 0 ${rZ}; to: 0 0 ${rZ+360} 0; loop: true; dur: 15000; easing: linear`);
 
+                // 5. Pivot Inner (Center Offsets)
+                const pivotInner = document.createElement('a-entity');
+                pivotInner.setAttribute('position', `${offX} 0 ${offZ}`);
+
+                // 6. The Model
                 const model = document.createElement('a-entity');
                 model.setAttribute('gltf-model', url);
                 model.setAttribute('scale', `${s} ${s} ${s}`);
-                model.setAttribute('position', `0 ${pY} 0`);
 
-                // Nest them: xWrap > yWrap > zWrap > model
-                zWrap.appendChild(model);
+                // Hierarchy Nesting
+                pivotInner.appendChild(model);
+                zWrap.appendChild(pivotInner);
                 yWrap.appendChild(zWrap);
                 xWrap.appendChild(yWrap);
-                itemWrapper.appendChild(xWrap);
+                anchorEntity.appendChild(xWrap);
+                itemWrapper.appendChild(anchorEntity);
 
-                // Add Text
+                // Add Labels (Floating above the tilted model)
                 const textEntity = document.createElement('a-entity');
-                textEntity.setAttribute('position', '0 0.6 0');
+                textEntity.setAttribute('position', '0 1.2 0.5'); // Positioned to be visible above the tilt
                 textEntity.innerHTML = `
-                    <a-text value="${item.name.toUpperCase()}" align="center" width="2.5" color="#d4af37"></a-text>
-                    <a-text value="Rs. ${item.price}" align="center" width="2" color="#fff" position="0 -0.2 0"></a-text>
+                    <a-text value="${item.name.toUpperCase()}" align="center" width="3" color="#d4af37" font="https://cdn.aframe.io/fonts/Aileron-Semibold.fnt"></a-text>
+                    <a-text value="Rs. ${item.price}" align="center" width="2.2" color="#fff" position="0 -0.25 0"></a-text>
                 `;
                 itemWrapper.appendChild(textEntity);
 
@@ -156,7 +172,7 @@
             const diff = startX - e.changedTouches[0].clientX;
             if (Math.abs(diff) > 50) {
                 currentIndex = Math.max(0, Math.min(menuItems.length - 1, currentIndex + (diff > 0 ? 1 : -1)));
-                document.getElementById('menu-slider').setAttribute('animation', `property: position; to: ${-currentIndex * itemSpacing} 0 0; dur: 600`);
+                document.getElementById('menu-slider').setAttribute('animation', `property: position; to: ${-currentIndex * itemSpacing} 0 0; dur: 600; easing: easeOutQuad`);
             }
         });
 
