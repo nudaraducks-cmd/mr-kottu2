@@ -10,47 +10,132 @@
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
 
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: #000; touch-action: none; }
+        body { margin: 0; overflow: hidden; font-family: 'Inter', sans-serif; background-color: #000; touch-action: none; }
         #ui-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; }
-        #status-bar { background: rgba(0,0,0,0.85); color: #d4af37; padding: 15px; text-align: center; font-size: 14px; letter-spacing: 2px; border-bottom: 1px solid rgba(212,175,55,0.3); font-weight: bold; }
-        #scanning-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #d4af37; text-align: center; z-index: 5; }
-        #loader { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #d4af37; z-index: 1000; transition: opacity 0.8s ease; }
-        .spinner { width: 40px; height: 40px; border: 3px solid rgba(212,175,55,0.1); border-top: 3px solid #d4af37; border-radius: 50%; animation: spin 1s linear infinite; }
+        
+        #status-bar { 
+            background: rgba(0,0,0,0.9); 
+            color: #d4af37; 
+            padding: 20px; 
+            text-align: center; 
+            font-size: 16px; 
+            letter-spacing: 4px; 
+            border-bottom: 2px solid #d4af37; 
+            font-weight: 900;
+            text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+        }
+
+        #scanning-overlay { 
+            position: absolute; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%); 
+            color: #d4af37; 
+            text-align: center; 
+            z-index: 5; 
+        }
+
+        #loader { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: #000; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            color: #d4af37; 
+            z-index: 1000; 
+        }
+
+        .spinner { 
+            width: 50px; 
+            height: 50px; 
+            border: 4px solid rgba(212, 175, 55, 0.1); 
+            border-top: 4px solid #d4af37; 
+            border-radius: 50%; 
+            animation: spin 1s linear infinite; 
+        }
+
         @keyframes spin { 100% { transform: rotate(360deg); } }
-        #swipe-hint { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.6; }
+
+        #swipe-hint { 
+            position: absolute; 
+            bottom: 50px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            color: #fff; 
+            font-size: 11px; 
+            text-transform: uppercase; 
+            letter-spacing: 3px; 
+            background: rgba(212, 175, 55, 0.2);
+            padding: 8px 20px;
+            border-radius: 50px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+        }
+
         .hidden { display: none !important; }
+
+        /* Scanning Line Animation */
+        .scan-line {
+            position: absolute;
+            width: 80%;
+            height: 2px;
+            background: #d4af37;
+            left: 10%;
+            top: 50%;
+            box-shadow: 0 0 15px #d4af37;
+            animation: scanMove 2s ease-in-out infinite;
+        }
+
+        @keyframes scanMove {
+            0%, 100% { transform: translateY(-100px); opacity: 0; }
+            50% { transform: translateY(100px); opacity: 1; }
+        }
     </style>
 </head>
 <body>
 
     <div id="loader">
-        <h2 style="letter-spacing: 4px; margin-bottom: 20px;">MR KOTTU</h2>
+        <h2 style="letter-spacing: 8px; margin-bottom: 20px; font-weight: 900;">MR KOTTU</h2>
         <div class="spinner"></div>
+        <p style="margin-top: 15px; font-size: 10px; opacity: 0.6; letter-spacing: 2px;">LOADING 3D ENGINE...</p>
     </div>
 
     <div id="scanning-overlay" class="hidden">
-        <div class="spinner" style="margin: 0 auto 15px auto;"></div>
-        <p style="font-size: 12px;">Scan Target Image...</p>
+        <div class="scan-line"></div>
+        <p style="font-size: 12px; margin-top: 140px; font-weight: bold; letter-spacing: 2px;">SCAN TABLE LOGO</p>
     </div>
 
     <div id="ui-overlay">
-        <div id="status-bar">MR KOTTU AR MENU</div>
-        <div id="swipe-hint" class="hidden">Swipe Left/Right to change</div>
+        <div id="status-bar">MR KOTTU 3D MENU</div>
+        <div id="swipe-hint" class="hidden">Swipe to Explore</div>
     </div>
 
     <a-scene 
-        mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiScanning: no;" 
+        mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiScanning: no; filterMinCF:0.0001; filterBeta: 0.001;" 
         color-space="sRGB" 
-        renderer="colorManagement: true, physicallyCorrectLights: true, antialias: true, alpha: true"
+        renderer="colorManagement: true, physicallyCorrectLights: true, antialias: true, alpha: true, logarithmicDepthBuffer: true"
         vr-mode-ui="enabled: false" 
         device-orientation-permission-ui="enabled: false">
         
+        <a-assets>
+            <!-- Shadow Plane Texture if needed -->
+        </a-assets>
+
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-        <a-light type="ambient" intensity="1.2"></a-light>
-        <a-light type="directional" position="1 2 1" intensity="0.8"></a-light>
+
+        <!-- Advanced Lighting for Realism -->
+        <a-light type="ambient" intensity="1.0"></a-light>
+        <a-light type="directional" position="1 4 2" intensity="1.5" castShadow="true"></a-light>
+        <a-light type="spot" position="0 3 0" intensity="0.8" angle="45" penumbra="0.5"></a-light>
 
         <a-entity mindar-image-target="targetIndex: 0" id="target-anchor">
-            <a-entity id="menu-slider" position="0 0 0" animation="property: position; dur: 600; easing: easeOutQuad">
+            <!-- Smooth Group to prevent jittering -->
+            <a-entity id="menu-slider" position="0 0 0" animation="property: position; dur: 800; easing: easeOutExpo">
                 <!-- Items injected here via JS -->
             </a-entity>
         </a-entity>
@@ -79,7 +164,7 @@
 
         let menuItems = [];
         let currentIndex = 0;
-        const itemSpacing = 3; // Increased spacing for better clarity
+        const itemSpacing = 4; // More space for high-end look
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
@@ -89,7 +174,8 @@
                         menuItems = Object.keys(data).map(key => ({ id: key, ...data[key] }));
                         renderMenu();
                     }
-                    document.getElementById('loader').style.display = 'none';
+                    document.getElementById('loader').style.opacity = '0';
+                    setTimeout(() => document.getElementById('loader').classList.add('hidden'), 800);
                     document.getElementById('scanning-overlay').classList.remove('hidden');
                 });
             } else { signInAnonymously(auth); }
@@ -101,7 +187,6 @@
             
             menuItems.forEach((item, index) => {
                 const itemWrapper = document.createElement('a-entity');
-                // Apply horizontal slider positioning
                 itemWrapper.setAttribute('position', `${index * itemSpacing} 0 0`);
                 
                 const url = item.modelUrl?.replace("?dl=0", "?raw=1").replace("www.dropbox.com", "dl.dropboxusercontent.com");
@@ -113,39 +198,44 @@
                 const offX = item.offsetX !== undefined ? item.offsetX : 0;
                 const offZ = item.offsetZ !== undefined ? item.offsetZ : 0;
 
+                // Physics-based rotations
                 const autoX = !!item.rotX_auto;
                 const autoY = item.rotY_auto !== undefined ? item.rotY_auto : true;
                 const autoZ = !!item.rotZ_auto;
 
-                // 1. Height & Sliding Anchor
                 const anchorEntity = document.createElement('a-entity');
                 anchorEntity.setAttribute('position', `0 ${pY} 0`);
 
-                // 2. X-Rotation (Tilt)
+                // Shadow Disk (Grounding Effect)
+                const shadow = document.createElement('a-circle');
+                shadow.setAttribute('rotation', '-90 0 0');
+                shadow.setAttribute('radius', '0.6');
+                shadow.setAttribute('material', 'shader: flat; color: #000; opacity: 0.4; transparent: true');
+                shadow.setAttribute('position', `${offX} -0.01 ${offZ}`);
+                anchorEntity.appendChild(shadow);
+
+                // Nested Wrappers for Multi-axis rotation
                 const xWrap = document.createElement('a-entity');
                 xWrap.setAttribute('rotation', `${rX} 0 0`);
-                if(autoX) xWrap.setAttribute('animation', `property: rotation; from: ${rX} 0 0; to: ${rX+360} 0 0; loop: true; dur: 15000; easing: linear`);
+                if(autoX) xWrap.setAttribute('animation', `property: rotation; from: ${rX} 0 0; to: ${rX+360} 0 0; loop: true; dur: 20000; easing: linear`);
 
-                // 3. Y-Rotation (Turn)
                 const yWrap = document.createElement('a-entity');
                 yWrap.setAttribute('rotation', `0 ${rY} 0`);
-                if(autoY) yWrap.setAttribute('animation', `property: rotation; from: 0 ${rY} 0; to: 0 ${rY+360} 0; loop: true; dur: 15000; easing: linear`);
+                if(autoY) yWrap.setAttribute('animation', `property: rotation; from: 0 ${rY} 0; to: 0 ${rY+360} 0; loop: true; dur: 18000; easing: linear`);
 
-                // 4. Z-Rotation (Roll)
                 const zWrap = document.createElement('a-entity');
                 zWrap.setAttribute('rotation', `0 0 ${rZ}`);
-                if(autoZ) zWrap.setAttribute('animation', `property: rotation; from: 0 0 ${rZ}; to: 0 0 ${rZ+360} 0; loop: true; dur: 15000; easing: linear`);
+                if(autoZ) zWrap.setAttribute('animation', `property: rotation; from: 0 0 ${rZ}; to: 0 0 ${rZ+360} 0; loop: true; dur: 20000; easing: linear`);
 
-                // 5. Pivot Inner (Center Offsets)
                 const pivotInner = document.createElement('a-entity');
                 pivotInner.setAttribute('position', `${offX} 0 ${offZ}`);
 
-                // 6. The Model
                 const model = document.createElement('a-entity');
                 model.setAttribute('gltf-model', url);
                 model.setAttribute('scale', `${s} ${s} ${s}`);
+                // Add smooth loading animation
+                model.setAttribute('animation__scale', `property: scale; from: 0 0 0; to: ${s} ${s} ${s}; dur: 1000; easing: easeOutElastic`);
 
-                // Hierarchy Nesting
                 pivotInner.appendChild(model);
                 zWrap.appendChild(pivotInner);
                 yWrap.appendChild(zWrap);
@@ -153,26 +243,30 @@
                 anchorEntity.appendChild(xWrap);
                 itemWrapper.appendChild(anchorEntity);
 
-                // Add Labels (Floating above the tilted model)
-                const textEntity = document.createElement('a-entity');
-                textEntity.setAttribute('position', '0 1.2 0.5'); // Positioned to be visible above the tilt
-                textEntity.innerHTML = `
-                    <a-text value="${item.name.toUpperCase()}" align="center" width="3" color="#d4af37" font="https://cdn.aframe.io/fonts/Aileron-Semibold.fnt"></a-text>
-                    <a-text value="Rs. ${item.price}" align="center" width="2.2" color="#fff" position="0 -0.25 0"></a-text>
+                // Premium UI Labels
+                const textGroup = document.createElement('a-entity');
+                textGroup.setAttribute('position', '0 1.5 0');
+                textGroup.setAttribute('billboard', ''); // Keep facing camera
+                textGroup.innerHTML = `
+                    <a-text value="${item.name.toUpperCase()}" align="center" width="4" color="#d4af37" font="https://cdn.aframe.io/fonts/Aileron-Semibold.fnt" neg-tab-width="0.5"></a-text>
+                    <a-text value="RS. ${item.price}" align="center" width="2.5" color="#fff" position="0 -0.3 0" opacity="0.8"></a-text>
+                    <a-plane width="1.8" height="0.6" position="0 -0.15 -0.05" material="color: #000; opacity: 0.5; transparent: true" rounded="0.1"></a-plane>
                 `;
-                itemWrapper.appendChild(textEntity);
+                itemWrapper.appendChild(textGroup);
 
                 slider.appendChild(itemWrapper);
             });
         }
 
+        // Improved Touch Interaction
         let startX = 0;
         document.addEventListener('touchstart', e => startX = e.touches[0].clientX);
         document.addEventListener('touchend', e => {
             const diff = startX - e.changedTouches[0].clientX;
-            if (Math.abs(diff) > 50) {
+            if (Math.abs(diff) > 40) {
                 currentIndex = Math.max(0, Math.min(menuItems.length - 1, currentIndex + (diff > 0 ? 1 : -1)));
-                document.getElementById('menu-slider').setAttribute('animation', `property: position; to: ${-currentIndex * itemSpacing} 0 0; dur: 600; easing: easeOutQuad`);
+                const slider = document.getElementById('menu-slider');
+                slider.setAttribute('animation', `property: position; to: ${-currentIndex * itemSpacing} 0 0; dur: 800; easing: easeOutExpo`);
             }
         });
 
@@ -180,6 +274,8 @@
         scene.addEventListener('targetFound', () => { 
             document.getElementById('scanning-overlay').classList.add('hidden'); 
             document.getElementById('swipe-hint').classList.remove('hidden'); 
+            // Trigger a Haptic feedback if supported
+            if (navigator.vibrate) navigator.vibrate(50);
         });
         scene.addEventListener('targetLost', () => { 
             document.getElementById('scanning-overlay').classList.remove('hidden'); 
