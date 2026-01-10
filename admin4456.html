@@ -23,13 +23,13 @@
         }
         .control-label { font-size: 10px; color: #888; text-transform: uppercase; font-weight: bold; }
         
-        /* Toggle Switch */
-        .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
+        /* Toggle Switch Style */
+        .switch { position: relative; display: inline-block; width: 34px; height: 18px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 20px; }
-        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: #d4af37; }
-        input:checked + .slider:before { transform: translateX(20px); }
+        input:checked + .slider:before { transform: translateX(16px); }
 
         video#webcam { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
         a-scene { position: relative; z-index: 1; width: 100%; height: 100%; }
@@ -73,44 +73,59 @@
                     </div>
 
                     <div class="p-4 bg-black/40 rounded-xl border border-gray-800 space-y-4">
-                        <div class="flex justify-between items-center">
-                            <p class="text-[10px] text-[#d4af37] font-bold uppercase">AR Alignment</p>
-                            <div class="flex items-center gap-2">
-                                <span class="text-[9px] text-gray-400">AUTO ROTATE</span>
-                                <label class="switch">
-                                    <input type="checkbox" id="isRotating" checked>
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-                        </div>
+                        <p class="text-[10px] text-[#d4af37] font-bold uppercase border-b border-gray-800 pb-2">AR Axis Control</p>
                         
                         <div>
                             <div class="flex justify-between"><label class="control-label">Scale</label><span id="v-scale" class="text-xs text-[#d4af37]">0.15</span></div>
                             <input type="range" id="scale" min="0.01" max="1" step="0.01" value="0.15" class="w-full accent-[#d4af37]">
                         </div>
 
-                        <div class="grid grid-cols-3 gap-2">
-                            <div>
-                                <label class="control-label block">Tilt X</label>
-                                <input type="range" id="rotX" min="0" max="360" step="1" value="90" class="w-full accent-[#d4af37]">
+                        <!-- Axis Controls -->
+                        <div class="space-y-4">
+                            <!-- X Axis -->
+                            <div class="grid grid-cols-1 gap-1">
+                                <div class="flex justify-between items-center">
+                                    <label class="control-label">Tilt X (Base)</label>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[8px] text-gray-500">ROTATE X</span>
+                                        <label class="switch"><input type="checkbox" id="rotX_auto"><span class="slider"></span></label>
+                                    </div>
+                                </div>
+                                <input type="range" id="rotX" min="0" max="360" value="90" class="w-full accent-[#d4af37]">
                             </div>
-                            <div>
-                                <label class="control-label block">Turn Y</label>
-                                <input type="range" id="rotY" min="0" max="360" step="1" value="0" class="w-full accent-[#d4af37]">
+
+                            <!-- Y Axis -->
+                            <div class="grid grid-cols-1 gap-1">
+                                <div class="flex justify-between items-center">
+                                    <label class="control-label">Turn Y (Base)</label>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[8px] text-gray-500">ROTATE Y</span>
+                                        <label class="switch"><input type="checkbox" id="rotY_auto" checked><span class="slider"></span></label>
+                                    </div>
+                                </div>
+                                <input type="range" id="rotY" min="0" max="360" value="0" class="w-full accent-[#d4af37]">
                             </div>
-                            <div>
-                                <label class="control-label block">Roll Z</label>
-                                <input type="range" id="rotZ" min="0" max="360" step="1" value="0" class="w-full accent-[#d4af37]">
+
+                            <!-- Z Axis -->
+                            <div class="grid grid-cols-1 gap-1">
+                                <div class="flex justify-between items-center">
+                                    <label class="control-label">Roll Z (Base)</label>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[8px] text-gray-500">ROTATE Z</span>
+                                        <label class="switch"><input type="checkbox" id="rotZ_auto"><span class="slider"></span></label>
+                                    </div>
+                                </div>
+                                <input type="range" id="rotZ" min="0" max="360" value="0" class="w-full accent-[#d4af37]">
                             </div>
                         </div>
 
                         <div>
-                            <div class="flex justify-between"><label class="control-label">Height</label><span id="v-posY" class="text-xs text-[#d4af37]">0</span></div>
+                            <div class="flex justify-between"><label class="control-label">Height Offset</label><span id="v-posY" class="text-xs text-[#d4af37]">0</span></div>
                             <input type="range" id="posY" min="-5" max="5" step="0.1" value="0" class="w-full accent-[#d4af37]">
                         </div>
                     </div>
 
-                    <button type="submit" id="submit-btn" class="w-full btn-gold py-4 rounded-xl uppercase text-xs tracking-widest">Save Config</button>
+                    <button type="submit" id="submit-btn" class="w-full btn-gold py-4 rounded-xl uppercase text-xs tracking-widest">Save Settings</button>
                 </form>
             </div>
 
@@ -164,11 +179,14 @@
         function syncPreview() {
             const url = document.getElementById('modelUrl').value;
             const s = document.getElementById('scale').value;
-            const rX = document.getElementById('rotX').value;
-            const rY = document.getElementById('rotY').value;
-            const rZ = document.getElementById('rotZ').value;
+            const rX = parseInt(document.getElementById('rotX').value);
+            const rY = parseInt(document.getElementById('rotY').value);
+            const rZ = parseInt(document.getElementById('rotZ').value);
             const pY = document.getElementById('posY').value;
-            const isRot = document.getElementById('isRotating').checked;
+            
+            const autoX = document.getElementById('rotX_auto').checked;
+            const autoY = document.getElementById('rotY_auto').checked;
+            const autoZ = document.getElementById('rotZ_auto').checked;
 
             if(url) pModel.setAttribute('gltf-model', url.replace("?dl=0", "?raw=1").replace("www.dropbox.com", "dl.dropboxusercontent.com"));
             pModel.setAttribute('scale', `${s} ${s} ${s}`);
@@ -176,14 +194,18 @@
             pAnchor.setAttribute('position', `0 ${pY} -3`);
             
             pModel.removeAttribute('animation');
-            if(isRot) {
-                pModel.setAttribute('animation', `property: rotation; from: ${rX} ${rY} ${rZ}; to: ${rX} ${parseInt(rY)+360} ${rZ}; loop: true; dur: 12000; easing: linear`);
+            if(autoX || autoY || autoZ) {
+                const toX = autoX ? rX + 360 : rX;
+                const toY = autoY ? rY + 360 : rY;
+                const toZ = autoZ ? rZ + 360 : rZ;
+                pModel.setAttribute('animation', `property: rotation; from: ${rX} ${rY} ${rZ}; to: ${toX} ${toY} ${toZ}; loop: true; dur: 12000; easing: linear`);
             }
+            
             document.getElementById('v-scale').innerText = s;
             document.getElementById('v-posY').innerText = pY;
         }
 
-        ['scale', 'rotX', 'rotY', 'rotZ', 'posY', 'modelUrl', 'isRotating'].forEach(id => {
+        ['scale', 'rotX', 'rotY', 'rotZ', 'posY', 'modelUrl', 'rotX_auto', 'rotY_auto', 'rotZ_auto'].forEach(id => {
             document.getElementById(id).addEventListener('input', syncPreview);
         });
 
@@ -199,7 +221,7 @@
                         const item = data[key];
                         const div = document.createElement('div');
                         div.className = "flex justify-between items-center p-4 bg-[#1a1a1a] border border-gray-800 rounded-xl";
-                        div.innerHTML = `<span class="text-white font-bold">${item.name}</span>
+                        div.innerHTML = `<span class="text-white font-bold text-xs">${item.name}</span>
                             <div class="flex gap-2">
                                 <button onclick="window.edit('${key}', ${JSON.stringify(item).replace(/"/g, '&quot;')})" class="text-blue-400 px-3 py-1 border border-blue-400/20 rounded-lg text-[10px]">EDIT</button>
                                 <button onclick="window.del('${key}')" class="text-red-400 px-3 py-1 border border-red-400/20 rounded-lg text-[10px]">DEL</button>
@@ -220,7 +242,9 @@
             document.getElementById('rotY').value = item.rotY || 0;
             document.getElementById('rotZ').value = item.rotZ || 0;
             document.getElementById('posY').value = item.posY || 0;
-            document.getElementById('isRotating').checked = item.isRotating !== undefined ? item.isRotating : true;
+            document.getElementById('rotX_auto').checked = !!item.rotX_auto;
+            document.getElementById('rotY_auto').checked = item.rotY_auto !== undefined ? item.rotY_auto : true;
+            document.getElementById('rotZ_auto').checked = !!item.rotZ_auto;
             syncPreview();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
@@ -231,9 +255,14 @@
             const data = {
                 name: document.getElementById('name').value, price: document.getElementById('price').value,
                 category: document.getElementById('category').value, modelUrl: document.getElementById('modelUrl').value,
-                scale: parseFloat(document.getElementById('scale').value), rotX: parseInt(document.getElementById('rotX').value),
-                rotY: parseInt(document.getElementById('rotY').value), rotZ: parseInt(document.getElementById('rotZ').value),
-                posY: parseFloat(document.getElementById('posY').value), isRotating: document.getElementById('isRotating').checked
+                scale: parseFloat(document.getElementById('scale').value), 
+                rotX: parseInt(document.getElementById('rotX').value),
+                rotY: parseInt(document.getElementById('rotY').value), 
+                rotZ: parseInt(document.getElementById('rotZ').value),
+                rotX_auto: document.getElementById('rotX_auto').checked,
+                rotY_auto: document.getElementById('rotY_auto').checked,
+                rotZ_auto: document.getElementById('rotZ_auto').checked,
+                posY: parseFloat(document.getElementById('posY').value)
             };
             if(id) await update(ref(db, `artifacts/${appId}/public/data/menuItems/${id}`), data);
             else await push(ref(db, `artifacts/${appId}/public/data/menuItems`), data);
