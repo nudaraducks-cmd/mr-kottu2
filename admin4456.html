@@ -2,62 +2,137 @@
 <html lang="si">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>MR KOTTU | AR Experience</title>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MR KOTTU | Admin AR Setup</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
-
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: #000; touch-action: none; }
-        #ui-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; }
-        #status-bar { background: rgba(0,0,0,0.85); color: #d4af37; padding: 15px; text-align: center; font-size: 14px; letter-spacing: 2px; border-bottom: 1px solid rgba(212,175,55,0.3); font-weight: bold; }
-        #scanning-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #d4af37; text-align: center; z-index: 5; }
-        #loader { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #d4af37; z-index: 1000; transition: opacity 0.8s ease; }
-        .spinner { width: 40px; height: 40px; border: 3px solid rgba(212,175,55,0.1); border-top: 3px solid #d4af37; border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-        #swipe-hint { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.6; }
-        .hidden { display: none !important; }
+        body { background-color: #0a0a0a; color: #e5e7eb; font-family: 'Inter', sans-serif; }
+        .card { background: #1a1a1a; border: 1px solid #333; }
+        input, select { background: #262626 !important; border: 1px solid #444 !important; color: white !important; }
+        .btn-gold { background: #d4af37; color: black; font-weight: bold; transition: all 0.3s; }
+        .btn-gold:hover { background: #f1c40f; transform: translateY(-2px); }
+        
+        #preview-container { 
+            height: 400px; 
+            border-radius: 12px; 
+            overflow: hidden; 
+            position: relative;
+            background: #000;
+            border: 2px solid #333;
+        }
+        .control-label { font-size: 10px; color: #888; text-transform: uppercase; font-weight: bold; }
+        
+        /* Toggle Switch */
+        .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #d4af37; }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        video#webcam { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+        a-scene { position: relative; z-index: 1; width: 100%; height: 100%; }
     </style>
 </head>
-<body>
+<body class="p-4 md:p-8">
+    <div class="max-w-6xl mx-auto">
+        <header class="flex justify-between items-center mb-8 pb-6 border-b border-gray-800">
+            <h1 class="text-3xl font-black text-[#d4af37] tracking-tighter">MR KOTTU <span class="text-white font-light">ADMIN AR</span></h1>
+            <div id="auth-status" class="text-[10px] text-gray-500 uppercase tracking-widest">Connected</div>
+        </header>
 
-    <div id="loader">
-        <h2 style="letter-spacing: 4px; margin-bottom: 20px;">MR KOTTU</h2>
-        <div class="spinner"></div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-1 card p-6 rounded-2xl h-fit">
+                <form id="add-item-form" class="space-y-4">
+                    <input type="hidden" id="edit-id">
+                    
+                    <div>
+                        <label class="control-label">Food Name</label>
+                        <input type="text" id="name" required class="w-full p-3 rounded-lg text-sm">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="control-label">Price (Rs.)</label>
+                            <input type="number" id="price" required class="w-full p-3 rounded-lg text-sm">
+                        </div>
+                        <div>
+                            <label class="control-label">Category</label>
+                            <select id="category" class="w-full p-3 rounded-lg text-sm">
+                                <option value="Kottu">Kottu</option>
+                                <option value="Rice">Rice</option>
+                                <option value="Drinks">Drinks</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="control-label">Model URL (.glb)</label>
+                        <input type="text" id="modelUrl" placeholder="Dropbox raw link" class="w-full p-3 rounded-lg text-xs">
+                    </div>
+
+                    <div class="p-4 bg-black/40 rounded-xl border border-gray-800 space-y-4">
+                        <div class="flex justify-between items-center">
+                            <p class="text-[10px] text-[#d4af37] font-bold uppercase">AR Alignment</p>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[9px] text-gray-400">AUTO ROTATE</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="isRotating" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between"><label class="control-label">Scale</label><span id="v-scale" class="text-xs text-[#d4af37]">0.15</span></div>
+                            <input type="range" id="scale" min="0.01" max="1" step="0.01" value="0.15" class="w-full accent-[#d4af37]">
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label class="control-label block">Tilt X</label>
+                                <input type="range" id="rotX" min="0" max="360" step="1" value="90" class="w-full accent-[#d4af37]">
+                            </div>
+                            <div>
+                                <label class="control-label block">Turn Y</label>
+                                <input type="range" id="rotY" min="0" max="360" step="1" value="0" class="w-full accent-[#d4af37]">
+                            </div>
+                            <div>
+                                <label class="control-label block">Roll Z</label>
+                                <input type="range" id="rotZ" min="0" max="360" step="1" value="0" class="w-full accent-[#d4af37]">
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between"><label class="control-label">Height</label><span id="v-posY" class="text-xs text-[#d4af37]">0</span></div>
+                            <input type="range" id="posY" min="-5" max="5" step="0.1" value="0" class="w-full accent-[#d4af37]">
+                        </div>
+                    </div>
+
+                    <button type="submit" id="submit-btn" class="w-full btn-gold py-4 rounded-xl uppercase text-xs tracking-widest">Save Config</button>
+                </form>
+            </div>
+
+            <div class="lg:col-span-2 space-y-4">
+                <div id="preview-container">
+                    <video id="webcam" autoplay playsinline></video>
+                    <a-scene embedded vr-mode-ui="enabled: false" renderer="alpha: true; colorManagement: true;">
+                        <a-light type="ambient" intensity="1.5"></a-light>
+                        <a-entity id="preview-anchor" position="0 0 -3">
+                            <a-entity id="preview-model" gltf-model="" scale="0.15 0.15 0.15" rotation="90 0 0"></a-entity>
+                        </a-entity>
+                        <a-camera look-controls="enabled: false" position="0 0 0"></a-camera>
+                    </a-scene>
+                </div>
+                <div id="items-list" class="space-y-3"></div>
+            </div>
+        </div>
     </div>
-
-    <div id="scanning-overlay" class="hidden">
-        <div class="spinner" style="margin: 0 auto 15px auto;"></div>
-        <p style="font-size: 12px;">Scan Target Image...</p>
-    </div>
-
-    <div id="ui-overlay">
-        <div id="status-bar">MR KOTTU AR MENU</div>
-        <div id="swipe-hint" class="hidden">Swipe Left/Right to change</div>
-    </div>
-
-    <a-scene 
-        mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiScanning: no;" 
-        color-space="sRGB" 
-        renderer="colorManagement: true, physicallyCorrectLights: true, antialias: true, alpha: true"
-        vr-mode-ui="enabled: false" 
-        device-orientation-permission-ui="enabled: false">
-        
-        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-        <a-light type="ambient" intensity="1.2"></a-light>
-
-        <a-entity mindar-image-target="targetIndex: 0" id="target-anchor">
-            <a-entity id="menu-slider" position="0 0 0" animation="property: position; dur: 600; easing: easeOutQuad">
-                <!-- Items injected here -->
-            </a-entity>
-        </a-entity>
-    </a-scene>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+        import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         const firebaseConfig = {
@@ -76,65 +151,96 @@
         const auth = getAuth(app);
         const appId = 'mr-kottu-ar';
 
-        let menuItems = [];
-        let currentIndex = 0;
-        const itemSpacing = 2.5;
+        const pModel = document.getElementById('preview-model');
+        const pAnchor = document.getElementById('preview-anchor');
 
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                onValue(ref(db, `artifacts/${appId}/public/data/menuItems`), (snapshot) => {
-                    const data = snapshot.val();
-                    if (data) {
-                        menuItems = Object.keys(data).map(key => ({ id: key, ...data[key] }));
-                        renderMenu();
-                    }
-                    document.getElementById('loader').style.display = 'none';
-                    document.getElementById('scanning-overlay').classList.remove('hidden');
-                });
-            } else { signInAnonymously(auth); }
+        async function setupCamera() {
+            const video = document.getElementById('webcam');
+            try { const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }); video.srcObject = stream; } 
+            catch (err) { console.error(err); }
+        }
+        setupCamera();
+
+        function syncPreview() {
+            const url = document.getElementById('modelUrl').value;
+            const s = document.getElementById('scale').value;
+            const rX = document.getElementById('rotX').value;
+            const rY = document.getElementById('rotY').value;
+            const rZ = document.getElementById('rotZ').value;
+            const pY = document.getElementById('posY').value;
+            const isRot = document.getElementById('isRotating').checked;
+
+            if(url) pModel.setAttribute('gltf-model', url.replace("?dl=0", "?raw=1").replace("www.dropbox.com", "dl.dropboxusercontent.com"));
+            pModel.setAttribute('scale', `${s} ${s} ${s}`);
+            pModel.setAttribute('rotation', `${rX} ${rY} ${rZ}`);
+            pAnchor.setAttribute('position', `0 ${pY} -3`);
+            
+            pModel.removeAttribute('animation');
+            if(isRot) {
+                pModel.setAttribute('animation', `property: rotation; from: ${rX} ${rY} ${rZ}; to: ${rX} ${parseInt(rY)+360} ${rZ}; loop: true; dur: 12000; easing: linear`);
+            }
+            document.getElementById('v-scale').innerText = s;
+            document.getElementById('v-posY').innerText = pY;
+        }
+
+        ['scale', 'rotX', 'rotY', 'rotZ', 'posY', 'modelUrl', 'isRotating'].forEach(id => {
+            document.getElementById(id).addEventListener('input', syncPreview);
         });
 
-        function renderMenu() {
-            const slider = document.getElementById('menu-slider');
-            slider.innerHTML = '';
-            menuItems.forEach((item, index) => {
-                const entity = document.createElement('a-entity');
-                entity.setAttribute('position', `${index * itemSpacing} 0 0.2`);
-                
-                const url = item.modelUrl?.replace("?dl=0", "?raw=1").replace("www.dropbox.com", "dl.dropboxusercontent.com");
-                const s = item.scale || 0.15;
-                const rX = item.rotX !== undefined ? item.rotX : 90;
-                const rY = item.rotY !== undefined ? item.rotY : 0;
-                const rZ = item.rotZ !== undefined ? item.rotZ : 0;
-                const pY = item.posY !== undefined ? item.posY : 0;
-                const isRot = item.isRotating !== undefined ? item.isRotating : true;
+        onAuthStateChanged(auth, (user) => { if (user) loadData(); else signInAnonymously(auth); });
 
-                let anim = isRot ? `animation="property: rotation; from: ${rX} ${rY} ${rZ}; to: ${rX} ${parseInt(rY)+360} ${rZ}; loop: true; dur: 12000; easing: linear"` : "";
-
-                entity.innerHTML = `
-                    <a-entity gltf-model="${url}" scale="${s} ${s} ${s}" rotation="${rX} ${rY} ${rZ}" position="0 ${pY} 0" ${anim}></a-entity>
-                    <a-entity position="0 0.6 0">
-                        <a-text value="${item.name.toUpperCase()}" align="center" width="2.5" color="#d4af37"></a-text>
-                        <a-text value="Rs. ${item.price}" align="center" width="2" color="#fff" position="0 -0.2 0"></a-text>
-                    </a-entity>`;
-                slider.appendChild(entity);
+        function loadData() {
+            onValue(ref(db, `artifacts/${appId}/public/data/menuItems`), (snapshot) => {
+                const list = document.getElementById('items-list');
+                list.innerHTML = '';
+                const data = snapshot.val();
+                if(data) {
+                    Object.keys(data).forEach(key => {
+                        const item = data[key];
+                        const div = document.createElement('div');
+                        div.className = "flex justify-between items-center p-4 bg-[#1a1a1a] border border-gray-800 rounded-xl";
+                        div.innerHTML = `<span class="text-white font-bold">${item.name}</span>
+                            <div class="flex gap-2">
+                                <button onclick="window.edit('${key}', ${JSON.stringify(item).replace(/"/g, '&quot;')})" class="text-blue-400 px-3 py-1 border border-blue-400/20 rounded-lg text-[10px]">EDIT</button>
+                                <button onclick="window.del('${key}')" class="text-red-400 px-3 py-1 border border-red-400/20 rounded-lg text-[10px]">DEL</button>
+                            </div>`;
+                        list.appendChild(div);
+                    });
+                }
             });
         }
 
-        // Touch Swipe
-        let startX = 0;
-        document.addEventListener('touchstart', e => startX = e.touches[0].clientX);
-        document.addEventListener('touchend', e => {
-            const diff = startX - e.changedTouches[0].clientX;
-            if (Math.abs(diff) > 50) {
-                currentIndex = Math.max(0, Math.min(menuItems.length - 1, currentIndex + (diff > 0 ? 1 : -1)));
-                document.getElementById('menu-slider').setAttribute('animation', `property: position; to: ${-currentIndex * itemSpacing} 0 0; dur: 600`);
-            }
-        });
+        window.edit = (id, item) => {
+            document.getElementById('edit-id').value = id;
+            document.getElementById('name').value = item.name;
+            document.getElementById('price').value = item.price;
+            document.getElementById('modelUrl').value = item.modelUrl;
+            document.getElementById('scale').value = item.scale || 0.15;
+            document.getElementById('rotX').value = item.rotX || 90;
+            document.getElementById('rotY').value = item.rotY || 0;
+            document.getElementById('rotZ').value = item.rotZ || 0;
+            document.getElementById('posY').value = item.posY || 0;
+            document.getElementById('isRotating').checked = item.isRotating !== undefined ? item.isRotating : true;
+            syncPreview();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
 
-        const scene = document.querySelector('a-scene');
-        scene.addEventListener('targetFound', () => { document.getElementById('scanning-overlay').classList.add('hidden'); document.getElementById('swipe-hint').classList.remove('hidden'); });
-        scene.addEventListener('targetLost', () => { document.getElementById('scanning-overlay').classList.remove('hidden'); document.getElementById('swipe-hint').classList.add('hidden'); });
+        document.getElementById('add-item-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit-id').value;
+            const data = {
+                name: document.getElementById('name').value, price: document.getElementById('price').value,
+                category: document.getElementById('category').value, modelUrl: document.getElementById('modelUrl').value,
+                scale: parseFloat(document.getElementById('scale').value), rotX: parseInt(document.getElementById('rotX').value),
+                rotY: parseInt(document.getElementById('rotY').value), rotZ: parseInt(document.getElementById('rotZ').value),
+                posY: parseFloat(document.getElementById('posY').value), isRotating: document.getElementById('isRotating').checked
+            };
+            if(id) await update(ref(db, `artifacts/${appId}/public/data/menuItems/${id}`), data);
+            else await push(ref(db, `artifacts/${appId}/public/data/menuItems`), data);
+            location.reload();
+        };
+
+        window.del = (id) => confirm("Delete?") && remove(ref(db, `artifacts/${appId}/public/data/menuItems/${id}`));
     </script>
 </body>
 </html>
