@@ -143,8 +143,9 @@
             <div class="lg:col-span-2 space-y-4">
                 <div id="preview-container">
                     <video id="webcam" autoplay playsinline></video>
-                    <a-scene embedded vr-mode-ui="enabled: false" renderer="alpha: true; colorManagement: true;">
+                    <a-scene embedded vr-mode-ui="enabled: false" renderer="alpha: true; antialias: true; colorManagement: true; precision: high;">
                         <a-light type="ambient" intensity="1.5"></a-light>
+                        <a-light type="directional" position="1 1 1" intensity="0.5"></a-light>
                         
                         <a-entity id="preview-anchor" position="0 0 -3">
                             <a-entity id="rot-x-wrapper">
@@ -227,13 +228,21 @@
             wrapY.setAttribute('rotation', `0 ${rY} 0`);
             wrapZ.setAttribute('rotation', `0 0 ${rZ}`);
             
+            // Smoother Animation Config
+            const animConfig = (prop, fromVal, axis) => {
+                let toVal = fromVal + 360;
+                let fromStr = axis === 'x' ? `${fromVal} 0 0` : axis === 'y' ? `0 ${fromVal} 0` : `0 0 ${fromVal}`;
+                let toStr = axis === 'x' ? `${toVal} 0 0` : axis === 'y' ? `0 ${toVal} 0` : `0 0 ${toVal}`;
+                return `property: rotation; from: ${fromStr}; to: ${toStr}; loop: true; dur: 15000; easing: linear; pauseEvents: rotation-stop; resumeEvents: rotation-start`;
+            };
+
             wrapX.removeAttribute('animation');
             wrapY.removeAttribute('animation');
             wrapZ.removeAttribute('animation');
 
-            if(autoX) wrapX.setAttribute('animation', `property: rotation; from: ${rX} 0 0; to: ${rX+360} 0 0; loop: true; dur: 12000; easing: linear`);
-            if(autoY) wrapY.setAttribute('animation', `property: rotation; from: 0 ${rY} 0; to: 0 ${rY+360} 0; loop: true; dur: 12000; easing: linear`);
-            if(autoZ) wrapZ.setAttribute('animation', `property: rotation; from: 0 0 ${rZ}; to: 0 0 ${rZ+360} ; loop: true; dur: 12000; easing: linear`);
+            if(autoX) wrapX.setAttribute('animation', animConfig('rotation', rX, 'x'));
+            if(autoY) wrapY.setAttribute('animation', animConfig('rotation', rY, 'y'));
+            if(autoZ) wrapZ.setAttribute('animation', animConfig('rotation', rZ, 'z'));
             
             document.getElementById('v-scale').innerText = s;
             document.getElementById('v-posY').innerText = pY;
