@@ -124,17 +124,18 @@
                 
                 const finalUrl = getDirectUrl(item.modelUrl);
                 
-                // Admin Settings (Scale, RotationX, PositionY)
+                // Admin Settings (Scale, RotationX, RotationY, PositionY)
                 const s = item.scale || 0.15;
                 const rX = item.rotX !== undefined ? item.rotX : 90;
+                const rY = item.rotY !== undefined ? item.rotY : 0;
                 const pY = item.posY !== undefined ? item.posY : 0;
                 
                 const modelHtml = finalUrl 
                     ? `<a-entity gltf-model="${finalUrl}" 
                                  scale="${s} ${s} ${s}" 
-                                 rotation="${rX} 0 0" 
+                                 rotation="${rX} ${rY} 0" 
                                  position="0 ${pY} 0" 
-                                 animation="property: rotation; from: ${rX} 0 0; to: ${rX} 360 0; loop: true; dur: 12000; easing: linear">
+                                 animation="property: rotation; from: ${rX} ${rY} 0; to: ${rX} ${rY + 360} 0; loop: true; dur: 12000; easing: linear">
                        </a-entity>`
                     : `<a-box position="0 ${pY} 0" scale="0.3 0.3 0.3" color="#d4af37"></a-box>`;
 
