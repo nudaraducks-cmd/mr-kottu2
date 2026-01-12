@@ -110,6 +110,14 @@
         vr-mode-ui="enabled: false" 
         device-orientation-permission-ui="enabled: false">
         
+        <a-assets>
+            <!-- Professional Audio Assets -->
+            <audio id="sound-scan" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3" preload="auto"></audio>
+            <audio id="sound-swipe" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3" preload="auto"></audio>
+            <audio id="sound-click" src="https://assets.mixkit.co/active_storage/sfx/2562/2562-preview.mp3" preload="auto"></audio>
+            <audio id="sound-success" src="https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3" preload="auto"></audio>
+        </a-assets>
+
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
         <a-light type="ambient" intensity="1.2"></a-light>
 
@@ -144,6 +152,23 @@
         let menuItems = [];
         let currentIndex = 0;
         const itemSpacing = 2.5;
+
+        // Sound helper
+        const playSound = (id) => {
+            const s = document.getElementById(id);
+            if(s) {
+                s.currentTime = 0;
+                s.play().catch(e => console.log("Audio unlock needed"));
+            }
+        };
+
+        // Interaction to unlock audio
+        document.body.addEventListener('touchstart', () => {
+            // Unlocks audio for mobile browsers
+            document.querySelectorAll('audio').forEach(a => {
+                a.play(); a.pause();
+            });
+        }, {once: true});
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
@@ -235,6 +260,7 @@
             if (Math.abs(diff) > 50) {
                 currentIndex = Math.max(0, Math.min(menuItems.length - 1, currentIndex + (diff > 0 ? 1 : -1)));
                 document.getElementById('menu-slider').setAttribute('animation', `property: position; to: ${-currentIndex * itemSpacing} 0 0; dur: 600; easing: easeOutQuad`);
+                playSound('sound-swipe');
             }
         });
 
@@ -243,6 +269,7 @@
             document.getElementById('scanning-overlay').classList.add('hidden'); 
             document.getElementById('swipe-hint').classList.remove('hidden'); 
             document.getElementById('order-btn-container').classList.remove('hidden');
+            playSound('sound-scan');
         });
         scene.addEventListener('targetLost', () => { 
             document.getElementById('scanning-overlay').classList.remove('hidden'); 
@@ -256,10 +283,12 @@
             document.getElementById('m-name').innerText = item.name;
             document.getElementById('m-price').innerText = "Rs. " + item.price;
             document.getElementById('order-modal').classList.add('active');
+            playSound('sound-click');
         };
 
         window.closeOrderModal = () => {
             document.getElementById('order-modal').classList.remove('active');
+            playSound('sound-click');
         };
 
         window.confirmOrder = async () => {
@@ -277,6 +306,7 @@
             };
             try {
                 await push(ref(db, `artifacts/${appId}/public/data/orders`), order);
+                playSound('sound-success');
                 closeOrderModal();
             } catch (e) { console.error(e); }
         };
