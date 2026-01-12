@@ -20,7 +20,7 @@
         #swipe-hint { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.6; }
         .hidden { display: none !important; }
 
-        /* --- NEW ORDER UI STYLES --- */
+        /* --- ORDER UI STYLES --- */
         #order-btn-container {
             position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: center; pointer-events: auto; z-index: 20;
         }
@@ -34,7 +34,6 @@
         }
         .order-btn:active { transform: scale(0.85); }
 
-        /* Full Screen Order Modal */
         #order-modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #0a0a0a; z-index: 100;
@@ -79,13 +78,11 @@
         <div id="status-bar">MR KOTTU AR MENU</div>
         <div id="swipe-hint" class="hidden">Swipe Left/Right</div>
         
-        <!-- NEW: Order Button -->
         <div id="order-btn-container" class="hidden">
             <button class="order-btn" onclick="openOrderModal()">ORDER THIS ITEM</button>
         </div>
     </div>
 
-    <!-- NEW: Order Modal Screen -->
     <div id="order-modal">
         <div class="modal-content">
             <h2 class="modal-title" id="m-name">ITEM NAME</h2>
@@ -107,7 +104,7 @@
     </div>
 
     <a-scene 
-        mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiScanning: no;" 
+        mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiScanning: no; filterMinCF: 0.0001; filterBeta: 0.001;" 
         color-space="sRGB" 
         renderer="colorManagement: true, physicallyCorrectLights: true, antialias: true, alpha: true"
         vr-mode-ui="enabled: false" 
@@ -117,7 +114,7 @@
         <a-light type="ambient" intensity="1.2"></a-light>
 
         <a-entity mindar-image-target="targetIndex: 0" id="target-anchor">
-            <a-entity id="menu-slider" position="0 0 0" animation="property: position; dur: 600; easing: easeOutQuad">
+            <a-entity id="menu-slider" position="0 0 0">
                 <!-- Items injected here -->
             </a-entity>
         </a-entity>
@@ -179,8 +176,6 @@
                 itemWrapper.setAttribute('position', `${index * itemSpacing} 0 0.2`);
                 
                 const url = getDirectUrl(item.modelUrl);
-                
-                // Admin Settings retrieval
                 const s = item.scale || 0.15;
                 const rX = item.rotX !== undefined ? item.rotX : 45;
                 const rY = item.rotY !== undefined ? item.rotY : 0;
@@ -193,11 +188,9 @@
                 const autoY = item.rotY_auto !== undefined ? item.rotY_auto : true;
                 const autoZ = !!item.rotZ_auto;
 
-                // 1. Height Anchor
                 const anchorEntity = document.createElement('a-entity');
                 anchorEntity.setAttribute('position', `0 ${pY} 0`);
 
-                // 2. Nested Wrappers for Independent Rotation (RESERVED LOGIC)
                 const xWrap = document.createElement('a-entity');
                 xWrap.setAttribute('rotation', `${rX} 0 0`);
                 if(autoX) xWrap.setAttribute('animation', `property: rotation; from: ${rX} 0 0; to: ${rX+360} 0 0; loop: true; dur: 20000; easing: linear`);
@@ -210,16 +203,13 @@
                 zWrap.setAttribute('rotation', `0 0 ${rZ}`);
                 if(autoZ) zWrap.setAttribute('animation', `property: rotation; from: 0 0 ${rZ}; to: 0 0 ${rZ+360} 0; loop: true; dur: 20000; easing: linear`);
 
-                // 3. Pivot Inner (Centering)
                 const pivotInner = document.createElement('a-entity');
                 pivotInner.setAttribute('position', `${offX} 0 ${offZ}`);
 
-                // 4. Model
                 const model = document.createElement('a-entity');
                 model.setAttribute('gltf-model', url);
                 model.setAttribute('scale', `${s} ${s} ${s}`);
                 
-                // Nesting
                 pivotInner.appendChild(model);
                 zWrap.appendChild(pivotInner);
                 yWrap.appendChild(zWrap);
@@ -227,7 +217,6 @@
                 anchorEntity.appendChild(xWrap);
                 itemWrapper.appendChild(anchorEntity);
 
-                // 5. Text Label
                 const textEntity = document.createElement('a-entity');
                 textEntity.setAttribute('position', '0 0.6 0');
                 textEntity.innerHTML = `
@@ -235,7 +224,6 @@
                     <a-text value="Rs. ${item.price}" align="center" width="2" color="#fff" position="0 -0.2 0"></a-text>
                 `;
                 itemWrapper.appendChild(textEntity);
-
                 slider.appendChild(itemWrapper);
             });
         }
@@ -246,7 +234,7 @@
             const diff = startX - e.changedTouches[0].clientX;
             if (Math.abs(diff) > 50) {
                 currentIndex = Math.max(0, Math.min(menuItems.length - 1, currentIndex + (diff > 0 ? 1 : -1)));
-                document.getElementById('menu-slider').setAttribute('animation', `property: position; to: ${-currentIndex * itemSpacing} 0 0; dur: 600`);
+                document.getElementById('menu-slider').setAttribute('animation', `property: position; to: ${-currentIndex * itemSpacing} 0 0; dur: 600; easing: easeOutQuad`);
             }
         });
 
@@ -262,11 +250,9 @@
             document.getElementById('order-btn-container').classList.add('hidden');
         });
 
-        // --- NEW ORDER LOGIC ---
         window.openOrderModal = () => {
             if(!menuItems[currentIndex]) return;
             const item = menuItems[currentIndex];
-            
             document.getElementById('m-name').innerText = item.name;
             document.getElementById('m-price').innerText = "Rs. " + item.price;
             document.getElementById('order-modal').classList.add('active');
@@ -280,9 +266,7 @@
             const item = menuItems[currentIndex];
             const tableNo = document.getElementById('table-no').value;
             const qty = document.getElementById('qty').value;
-
-            if(!tableNo || !qty) return alert("Please fill all details");
-
+            if(!tableNo || !qty) return;
             const order = {
                 itemName: item.name,
                 price: item.price,
@@ -291,14 +275,10 @@
                 status: 'pending',
                 timestamp: Date.now()
             };
-
             try {
                 await push(ref(db, `artifacts/${appId}/public/data/orders`), order);
-                alert("Order Sent Successfully!");
                 closeOrderModal();
-            } catch (e) {
-                alert("Error sending order: " + e.message);
-            }
+            } catch (e) { console.error(e); }
         };
     </script>
 </body>
